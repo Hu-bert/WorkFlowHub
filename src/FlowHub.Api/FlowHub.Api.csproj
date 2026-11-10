@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="..\FlowHub.Application\FlowHub.Application.csproj" />
+    <ProjectReference Include="..\FlowHub.Infrastructure\FlowHub.Infrastructure.csproj" />
+    <ProjectReference Include="..\FlowHub.Integrations\FlowHub.Integrations.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Serilog.AspNetCore" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,41 @@
+{
+  "name": "flowhub-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run type-check && vite build",
+    "type-check": "vue-tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^11.0.0",
+    "@primeuix/themes": "2.0.3",
+    "pinia": "^4.1.0",
+    "primeicons": "7.0.0",
+    "primevue": "4.5.5",
+    "vue": "^3.5.45",
+    "vue-router": "^5.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "@vue/test-utils": "^2.5.1",
+    "@vue/tsconfig": "^0.9.1",
+    "eslint": "^10.14.0",
+    "eslint-plugin-vue": "^10.12.1",
+    "jsdom": "^31.0.0",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vite": "^8.3.7",
+    "vitest": "^5.1.0",
+    "vue-tsc": "^3.3.14"
+  }
+}

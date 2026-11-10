@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "flowhub",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/FlowHub.Api", "--no-build"],
+      "port": 5080
+    }
+  ]
+}

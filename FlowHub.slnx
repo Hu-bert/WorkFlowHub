@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FlowHub.Api/FlowHub.Api.csproj" />
+    <Project Path="src/FlowHub.Application/FlowHub.Application.csproj" />
+    <Project Path="src/FlowHub.Domain/FlowHub.Domain.csproj" />
+    <Project Path="src/FlowHub.Infrastructure/FlowHub.Infrastructure.csproj" />
+    <Project Path="src/FlowHub.Integrations/FlowHub.Integrations.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FlowHub.Api.Tests/FlowHub.Api.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,32 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+
+# Node / Vite
+node_modules/
+dist/
+web/coverage/
+
+# App data
+*.db
+*.db-shm
+*.db-wal
+logs/
+work/
+
+# Secrets
+appsettings.*.local.json
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Zbudowany frontend (generowany przez npm run build)
+src/FlowHub.Api/wwwroot/
