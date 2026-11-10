@@ -2,5 +2,5 @@
 export interface StatusPresentation {
   label: string
   icon: string
-  severity: 'success' | 'info' | 'warn' | 'danger' | 'secondary'
+  color: 'success' | 'info' | 'warning' | 'error' | 'primary' | 'grey'
 }

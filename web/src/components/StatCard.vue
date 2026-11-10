@@ -8,14 +8,14 @@ defineProps<{
 </script>
 
 <template>
-  <div class="fh-card stat">
-    <span class="icon"><i :class="icon" /></span>
+  <v-card class="stat">
+    <span class="icon"><v-icon :icon="icon" /></span>
     <div>
-      <div class="label">{{ label }}</div>
+      <div class="fh-muted label">{{ label }}</div>
       <div class="value">{{ value }}</div>
-      <div v-if="hint" class="hint">{{ hint }}</div>
+      <div v-if="hint" class="fh-muted hint">{{ hint }}</div>
     </div>
-  </div>
+  </v-card>
 </template>
 
 <style scoped>
@@ -23,6 +23,7 @@ defineProps<{
   display: flex;
   align-items: center;
   gap: 1rem;
+  padding: 1.25rem;
 }
 
 .icon {
@@ -32,13 +33,11 @@ defineProps<{
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  font-size: 1.25rem;
   color: #c4b5fd;
   background: rgba(139, 92, 246, 0.16);
 }
 
 .label {
-  color: var(--fh-muted);
   font-size: 0.85rem;
 }
 
@@ -49,7 +48,6 @@ defineProps<{
 }
 
 .hint {
-  color: var(--fh-muted);
   font-size: 0.75rem;
 }
 </style>

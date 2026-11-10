@@ -30,3 +30,6 @@ appsettings.*.local.json
 
 # Zbudowany frontend (generowany przez npm run build)
 src/FlowHub.Api/wwwroot/
+
+# Tymczasowa baza narzêdzia dotnet ef
+design-time.db

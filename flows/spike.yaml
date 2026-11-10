@@ -1,0 +1,64 @@
+# Spike: rozpoznanie tematu bez zmian w kodzie. Wynik to raport, nie PR.
+type: Spike
+name: Spike (rozpoznanie)
+version: 1
+flow:
+  - id: create-folder
+    name: Utworzenie folderu zadania
+    kind: Script
+    script: scripts/create-folder.ps1
+    requiresApproval: false
+
+  - id: clone-repo
+    name: Pobranie repo
+    kind: Script
+    script: scripts/clone-repo.ps1
+    perRepo: true
+    requiresApproval: false
+
+  - id: copy-blocks
+    name: Kopiowanie agentów i skilli
+    kind: Script
+    script: scripts/copy-blocks.ps1
+    perRepo: true
+    requiresApproval: false
+
+  - id: analyze-tech
+    name: Analiza technologiczna
+    kind: Agent
+    agent: analiza-technologii
+    prompt: prompts/analiza-technologii.md
+    model: tier:cheap
+    tokenBudget: 30000
+    perRepo: true
+    allowedTools: [read, "shell(git:*)"]
+    outputs: ["context-{repo}.md"]
+
+  - id: spike-report
+    name: Raport ze spike'a
+    kind: Agent
+    agent: planowanie
+    prompt: prompts/spike.md
+    model: tier:standard
+    tokenBudget: 80000
+    allowedTools: [read, "shell(git:*)"]
+    inputs: ["context-*.md"]
+    outputs: [spike-report.md]
+
+  - id: review
+    name: Przegląd raportu
+    kind: Manual
+    checklist:
+      - Raport odpowiada na pytanie ze spike'a
+      - Wiadomo, jakie zadania z niego wynikają
+
+  - id: retro
+    name: Retro
+    kind: Agent
+    agent: retro
+    prompt: prompts/retro.md
+    model: tier:cheap
+    tokenBudget: 20000
+    allowedTools: [read]
+    inputs: [spike-report.md]
+    outputs: [retro.md]

@@ -1,0 +1,134 @@
+<script setup lang="ts">
+import { computed, reactive, ref, watch } from 'vue'
+
+import { suggestRepositories } from '@/api/catalog'
+import type { CreateWorkItemRequest, WorkItemDetails } from '@/api/types'
+import { useCatalog } from '@/stores/catalog'
+import { useNotifications } from '@/stores/notifications'
+import { useWorkItems } from '@/stores/workItems'
+
+const open = defineModel<boolean>({ required: true })
+const emit = defineEmits<{ created: [item: WorkItemDetails] }>()
+
+const catalog = useCatalog()
+const workItems = useWorkItems()
+const notifications = useNotifications()
+
+const emptyForm = (): CreateWorkItemRequest => ({
+  key: '',
+  title: '',
+  description: '',
+  type: catalog.flows[0]?.type ?? '',
+  source: 'Manual',
+  sourceUrl: null,
+  repositories: [],
+})
+
+const form = reactive<CreateWorkItemRequest>(emptyForm())
+const saving = ref(false)
+const suggestionNote = ref('')
+
+const flowOptions = computed(() => catalog.flows.map((flow) => ({ title: flow.name, value: flow.type })))
+const repositoryOptions = computed(() => catalog.repositories.map((repository) => repository.name))
+const canSave = computed(() => !!form.key.trim() && !!form.title.trim() && !!form.type && form.repositories.length > 0)
+
+watch(open, (isOpen) => {
+  if (isOpen) {
+    Object.assign(form, emptyForm())
+    suggestionNote.value = ''
+  }
+})
+
+/** Rozpoznanie repo po słowach kluczowych z katalogu — bez modelu, 0 tokenów. */
+async function suggest() {
+  try {
+    const suggestions = await suggestRepositories(`${form.title} ${form.description}`)
+    form.repositories = [...new Set([...form.repositories, ...suggestions.map((suggestion) => suggestion.name)])]
+    suggestionNote.value = suggestions.length
+      ? suggestions.map((s) => `${s.name} (${s.matchedKeywords.join(', ')})`).join(' · ')
+      : 'Nie znalazłem słów kluczowych z katalogu repo — wybierz ręcznie.'
+  } catch (error) {
+    notifications.error(error)
+  }
+}
+
+async function save() {
+  saving.value = true
+  try {
+    const created = await workItems.create({ ...form, sourceUrl: form.sourceUrl?.trim() || null })
+    notifications.success(`Utworzono zadanie ${created.summary.key}`)
+    open.value = false
+    emit('created', created)
+  } catch (error) {
+    notifications.error(error)
+  } finally {
+    saving.value = false
+  }
+}
+</script>
+
+<template>
+  <v-dialog v-model="open" max-width="720">
+    <v-card title="Nowe zadanie" prepend-icon="mdi-plus-circle-outline">
+      <v-card-text class="form">
+        <div class="row">
+          <v-text-field v-model="form.key" label="Klucz (np. PROJ-123)" autofocus hide-details />
+          <v-select v-model="form.type" :items="flowOptions" label="Typ zadania" hide-details />
+        </div>
+        <v-text-field v-model="form.title" label="Tytuł" hide-details />
+        <v-textarea
+          v-model="form.description"
+          label="Treść zadania (wklej z Jiry)"
+          rows="5"
+          auto-grow
+          hide-details
+        />
+        <v-text-field v-model="form.sourceUrl" label="Link do zadania (opcjonalnie)" hide-details />
+
+        <div class="row repos">
+          <v-select
+            v-model="form.repositories"
+            :items="repositoryOptions"
+            label="Repozytoria (pierwsze = główne)"
+            multiple
+            chips
+            closable-chips
+            hide-details
+          />
+          <v-btn variant="tonal" color="primary" prepend-icon="mdi-auto-fix" @click="suggest">Zaproponuj</v-btn>
+        </div>
+        <div v-if="suggestionNote" class="fh-muted note">{{ suggestionNote }}</div>
+      </v-card-text>
+
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="open = false">Anuluj</v-btn>
+        <v-btn color="primary" variant="flat" :disabled="!canSave" :loading="saving" @click="save">Utwórz</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+</template>
+
+<style scoped>
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.row.repos {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.note {
+  font-size: 0.8rem;
+  margin-top: -0.5rem;
+}
+</style>

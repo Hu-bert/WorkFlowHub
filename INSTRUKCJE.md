@@ -287,7 +287,7 @@ Każdą propozycję zatwierdzam osobno → zmiana do `blocks/` (commit).
 
 **Copilot:** model rozliczeń i lista modeli — pomijamy na razie; tabela routingu i ceny w konfiguracji, uzupełnimy później.
 
-**UI:** **PrimeVue**, nowoczesny dashboard CRM, **ciemny motyw w odcieniach fioletu**.
+**UI:** **Vuetify 4** (MIT; zmiana z PrimeVue — wersja 5 jest płatna), ikony `@mdi/font`, nowoczesny dashboard CRM, **ciemny motyw w odcieniach fioletu**.
 
 **Fake:** dane statyczne (bez symulacji zmian w czasie).
 

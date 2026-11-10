@@ -1,33 +1,41 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
+import { useNotifications } from '@/stores/notifications'
+
 import AppSidebar from './AppSidebar.vue'
+
+const notifications = useNotifications()
+
+const snackbarOpen = computed({
+  get: () => notifications.current !== null,
+  set: (open) => {
+    if (!open) notifications.clear()
+  },
+})
 </script>
 
 <template>
-  <div class="layout">
+  <v-app>
     <AppSidebar />
-    <main class="content">
-      <slot />
-    </main>
-  </div>
+    <v-main>
+      <div class="content">
+        <slot />
+      </div>
+    </v-main>
+
+    <v-snackbar v-model="snackbarOpen" :color="notifications.current?.color" timeout="6000" location="bottom right">
+      {{ notifications.current?.text }}
+    </v-snackbar>
+  </v-app>
 </template>
 
 <style scoped>
-.layout {
-  display: grid;
-  grid-template-columns: 248px 1fr;
-  min-height: 100vh;
-}
-
 .content {
   padding: 2rem 2.5rem;
-  min-width: 0;
 }
 
 @media (max-width: 800px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-
   .content {
     padding: 1.25rem 1rem;
   }

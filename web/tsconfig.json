@@ -1,9 +1,9 @@
-{
+﻿{
   "extends": "@vue/tsconfig/tsconfig.dom.json",
   "compilerOptions": {
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "types": ["vite/client"],
+    "types": ["vite/client", "vuetify"],
     "paths": {
       "@/*": ["./src/*"]
     }

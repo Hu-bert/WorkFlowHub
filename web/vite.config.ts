@@ -1,11 +1,12 @@
 import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
+import vuetify from 'vite-plugin-vuetify'
 import { defineConfig } from 'vitest/config'
 
 const apiUrl = 'http://localhost:5080'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), vuetify({ autoImport: true })],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
@@ -20,8 +21,11 @@ export default defineConfig({
     // API serwuje zbudowany frontend jako pliki statyczne.
     outDir: '../src/FlowHub.Api/wwwroot',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1500,
   },
   test: {
     environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    server: { deps: { inline: ['vuetify'] } },
   },
 })

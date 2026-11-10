@@ -1,4 +1,8 @@
+using FlowHub.Application.Flows;
+using FlowHub.Application.Repositories;
+using FlowHub.Application.WorkItems;
 using FlowHub.Infrastructure.Persistence;
+using FlowHub.Infrastructure.Yaml;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +17,10 @@ public static class DependencyInjection
     {
         services.AddDbContext<FlowHubDbContext>((provider, options) =>
             options.UseSqlite(ReadConnectionString(provider)));
+
+        services.AddScoped<IWorkItemStore, EfWorkItemStore>();
+        services.AddSingleton<IFlowStore, YamlFlowStore>();
+        services.AddSingleton<IRepositoryCatalog, YamlRepositoryCatalog>();
 
         return services;
     }
