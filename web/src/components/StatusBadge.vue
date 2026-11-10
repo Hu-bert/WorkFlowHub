@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import Tag from 'primevue/tag'
-
 import type { StatusPresentation } from '@/shared/status'
 
-defineProps<StatusPresentation>()
+defineProps<StatusPresentation & { size?: 'x-small' | 'small' | 'default' | 'large' }>()
 </script>
 
 <template>
-  <Tag :severity="severity" :icon="icon" :value="label" rounded />
+  <v-chip :color="color" :prepend-icon="icon" :size="size ?? 'default'" variant="tonal" class="font-weight-medium">
+    {{ label }}
+  </v-chip>
 </template>

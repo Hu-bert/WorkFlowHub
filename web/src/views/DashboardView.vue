@@ -1,66 +1,38 @@
 <script setup lang="ts">
-import Button from 'primevue/button'
-
 import StatCard from '@/components/StatCard.vue'
 
 // Faza 1: same wartości startowe. Prawdziwe dane od Fazy 2–3.
 const stats = [
-  { label: 'W toku', value: '0', icon: 'pi pi-play-circle' },
-  { label: 'Czeka na Ciebie', value: '0', icon: 'pi pi-user-edit', hint: 'kroki do akceptacji' },
-  { label: 'Tokeny dziś', value: '0', icon: 'pi pi-bolt' },
-  { label: 'Koszt dziś', value: '—', icon: 'pi pi-wallet' },
+  { label: 'W toku', value: '0', icon: 'mdi-play-circle-outline' },
+  { label: 'Czeka na Ciebie', value: '0', icon: 'mdi-account-clock-outline', hint: 'kroki do akceptacji' },
+  { label: 'Tokeny dziś', value: '0', icon: 'mdi-lightning-bolt-outline' },
+  { label: 'Koszt dziś', value: '—', icon: 'mdi-wallet-outline' },
 ]
 </script>
 
 <template>
-  <section class="dashboard">
-    <header class="header">
+  <section class="fh-page">
+    <header class="fh-page-header">
       <div>
         <h1>Dashboard</h1>
         <p>Twoje zadania, przepływy i koszty w jednym miejscu.</p>
       </div>
-      <Button label="Nowe zadanie" icon="pi pi-plus" disabled title="Faza 3" />
+      <v-btn color="primary" prepend-icon="mdi-plus" disabled>Nowe zadanie</v-btn>
     </header>
 
     <div class="stats">
       <StatCard v-for="stat in stats" :key="stat.label" v-bind="stat" />
     </div>
 
-    <div class="fh-card empty">
-      <i class="pi pi-inbox" />
+    <v-card class="empty">
+      <v-icon icon="mdi-inbox-outline" size="48" color="primary" />
       <h2>Brak zadań</h2>
-      <p>Tworzenie zadań i flow pojawi się w kolejnych fazach.</p>
-    </div>
+      <p class="fh-muted">Tworzenie zadań i flow pojawi się w kolejnych fazach.</p>
+    </v-card>
   </section>
 </template>
 
 <style scoped>
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
-  max-width: 1400px;
-}
-
-.header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-h1 {
-  margin: 0;
-  font-size: 2rem;
-  font-weight: 700;
-}
-
-.header p {
-  margin: 0.35rem 0 0;
-  color: var(--fh-muted);
-}
-
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -76,11 +48,6 @@ h1 {
   text-align: center;
 }
 
-.empty i {
-  font-size: 2.5rem;
-  color: #a78bfa;
-}
-
 .empty h2 {
   margin: 0.5rem 0 0;
   font-size: 1.25rem;
@@ -88,6 +55,5 @@ h1 {
 
 .empty p {
   margin: 0;
-  color: var(--fh-muted);
 }
 </style>

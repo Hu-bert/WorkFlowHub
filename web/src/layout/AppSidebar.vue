@@ -9,55 +9,54 @@ const system = useSystemStore()
 </script>
 
 <template>
-  <aside class="sidebar">
+  <v-navigation-drawer permanent width="248" class="sidebar">
     <div class="brand">
-      <span class="logo"><i class="pi pi-bolt" /></span>
+      <span class="logo"><v-icon icon="mdi-lightning-bolt" /></span>
       <span class="name">FlowHub</span>
     </div>
 
-    <nav class="nav">
-      <template v-for="item in navigation" :key="item.to">
-        <span v-if="item.comingInPhase" class="nav-item disabled" :title="`Faza ${item.comingInPhase}`">
-          <i :class="item.icon" />
-          {{ item.label }}
+    <v-list nav density="comfortable" color="primary">
+      <v-list-item
+        v-for="item in navigation"
+        :key="item.to"
+        :to="item.comingInPhase ? undefined : item.to"
+        :disabled="!!item.comingInPhase"
+        :prepend-icon="item.icon"
+        :title="item.label"
+        rounded="lg"
+      >
+        <template v-if="item.comingInPhase" #append>
           <small>wkrótce</small>
-        </span>
-        <RouterLink v-else :to="item.to" class="nav-item" active-class="active">
-          <i :class="item.icon" />
-          {{ item.label }}
-        </RouterLink>
-      </template>
-    </nav>
+        </template>
+      </v-list-item>
+    </v-list>
 
-    <div class="connections">
-      <div class="connection">
-        <span>API</span>
-        <StatusBadge v-bind="connectionPresentation[system.api]" />
+    <template #append>
+      <div class="connections">
+        <div class="connection">
+          <span>API</span>
+          <StatusBadge v-bind="connectionPresentation[system.api]" size="small" />
+        </div>
+        <div class="connection">
+          <span>Na żywo</span>
+          <StatusBadge v-bind="connectionPresentation[system.live]" size="small" />
+        </div>
       </div>
-      <div class="connection">
-        <span>Na żywo</span>
-        <StatusBadge v-bind="connectionPresentation[system.live]" />
-      </div>
-    </div>
-  </aside>
+    </template>
+  </v-navigation-drawer>
 </template>
 
 <style scoped>
 .sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  padding: 1.5rem 1rem;
-  background: rgba(24, 20, 43, 0.85);
-  border-right: 1px solid var(--fh-border);
-  backdrop-filter: blur(8px);
+  background: rgba(24, 20, 43, 0.9) !important;
+  border-right: 1px solid var(--fh-border) !important;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0 0.5rem;
+  padding: 1.5rem 1.25rem 1.25rem;
 }
 
 .logo {
@@ -73,54 +72,13 @@ const system = useSystemStore()
 .name {
   font-size: 1.25rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
-}
-
-.nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.7rem 0.85rem;
-  border-radius: 10px;
-  color: var(--fh-muted);
-  font-weight: 500;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-
-.nav-item:hover:not(.disabled) {
-  background: rgba(139, 92, 246, 0.1);
-  color: var(--fh-text);
-}
-
-.nav-item.active {
-  background: rgba(139, 92, 246, 0.18);
-  color: var(--fh-text);
-  box-shadow: inset 3px 0 0 var(--fh-accent);
-}
-
-.nav-item.disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.nav-item small {
-  margin-left: auto;
-  font-size: 0.7rem;
 }
 
 .connections {
-  margin-top: auto;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  margin: 1rem;
   padding: 0.85rem;
   border: 1px solid var(--fh-border);
   border-radius: 12px;
