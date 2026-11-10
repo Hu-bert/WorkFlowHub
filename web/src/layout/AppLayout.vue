@@ -1,5 +1,18 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
+import { useNotifications } from '@/stores/notifications'
+
 import AppSidebar from './AppSidebar.vue'
+
+const notifications = useNotifications()
+
+const snackbarOpen = computed({
+  get: () => notifications.current !== null,
+  set: (open) => {
+    if (!open) notifications.clear()
+  },
+})
 </script>
 
 <template>
@@ -10,6 +23,10 @@ import AppSidebar from './AppSidebar.vue'
         <slot />
       </div>
     </v-main>
+
+    <v-snackbar v-model="snackbarOpen" :color="notifications.current?.color" timeout="6000" location="bottom right">
+      {{ notifications.current?.text }}
+    </v-snackbar>
   </v-app>
 </template>
 

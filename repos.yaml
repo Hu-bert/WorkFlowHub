@@ -1,0 +1,32 @@
+# Katalog repozytoriów FlowHub. Jeden wpis = jedno repo.
+#
+#   name                   - nazwa repo (pokazywana w UI, nazwa katalogu klonu)
+#   url                    - adres klonu w TFS / Azure DevOps Server
+#                            (demo:// = repo demonstracyjne tworzone lokalnie, bez sieci)
+#   defaultBranch          - branch, od którego odchodzi branch zadania
+#   ciBuildConfigurations  - id build configuration w TeamCity
+#   deployProject          - nazwa projektu w Octopus Deploy
+#   keywords               - słowa, po których FlowHub rozpoznaje repo z treści zadania
+#
+# W pracy: podmień wpisy demo na prawdziwe repo.
+repositories:
+  - name: Billing.Api
+    url: demo://Billing.Api
+    defaultBranch: main
+    ciBuildConfigurations: [Billing_Api_Build]
+    deployProject: Billing.Api
+    keywords: [faktura, faktury, płatność, billing, rozliczenie]
+
+  - name: Shared.Lib
+    url: demo://Shared.Lib
+    defaultBranch: main
+    ciBuildConfigurations: [Shared_Lib_Build]
+    deployProject: Shared.Lib
+    keywords: [biblioteka wspólna, kontrakt, nuget, shared]
+
+  - name: Customer.Portal
+    url: demo://Customer.Portal
+    defaultBranch: main
+    ciBuildConfigurations: [Customer_Portal_Build, Customer_Portal_E2E]
+    deployProject: Customer.Portal
+    keywords: [portal, klient, logowanie, formularz, frontend]

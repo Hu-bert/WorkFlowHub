@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using FlowHub.Api.Endpoints;
 
 namespace FlowHub.Api.Tests;
@@ -10,8 +9,8 @@ public sealed class HealthEndpointTests(FlowHubApiFactory factory) : IClassFixtu
     {
         using var client = factory.CreateClient();
 
-        var health = await client.GetFromJsonAsync<HealthResponse>("/api/health", TestContext.Current.CancellationToken);
+        var health = await client.GetAsync<HealthResponse>("/api/health");
 
-        Assert.Equal("ok", health?.Status);
+        Assert.Equal("ok", health.Status);
     }
 }

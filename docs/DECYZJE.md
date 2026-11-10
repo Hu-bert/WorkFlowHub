@@ -11,3 +11,18 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 | **Microsoft.Testing.Platform** (`global.json`) | .NET 10 SDK nie wspiera już VSTest dla xUnit v3. Testy: `dotnet test --solution FlowHub.slnx`. |
 | **`FlowHub.slnx`** zamiast `.sln` | Domyślny format solucji w .NET 10. |
 | Skrypty `.ps1` w UTF-8 z BOM, składnia zgodna z Windows PowerShell 5.1 | Na maszynie nie ma `pwsh`; 5.1 bez BOM psuje polskie znaki. |
+
+## Faza 2 — domena, YAML, kanban
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Repo wybierasz przy tworzeniu zadania** (przycisk „Zaproponuj” dopasowuje po słowach kluczowych, 0 tokenów) | Kroki „per repo” muszą znać listę repo, zanim flow ruszy. Osobny krok „rozpoznanie repo przez agenta” odpadł — Twój flow bazowy go nie ma. |
+| **Katalog repo tylko w `repos.yaml`** (UI tylko do odczytu + „Wczytaj ponownie”) | KISS. Edycja w UI i „Importuj z TFS/TC/Octopus” wymagają prawdziwych połączeń. |
+| **Flow w pamięci, bez cache w bazie** | Pliki YAML są źródłem prawdy; cache w bazie nic nie dawał. Niepoprawny plik nie blokuje pozostałych — błąd widać na Dashboardzie i w logu. |
+| **Nieznany klucz w YAML = błąd** | Literówka typu `tokenBudgte` nie przejdzie po cichu. |
+| **Typy zadań: Business, Bug, Technical, Spike** | Spec wymienia 6 (trzy warianty spike'a). Jeden `Spike` wystarcza na start; kolejny typ = nowy plik w `flows/`. |
+| **Kolumny kanbana w `appsettings.json` → `Board:Columns`** | Konfigurowalne bez kompilacji. Kolumna to etap pracy ustawiany ręcznie, niezależny od kroku flow. |
+| **Migracje EF Core** (`dotnet ef`, narzędzie lokalne w `dotnet-tools.json`) | Baza przeżywa zmiany schematu między fazami. Nowa migracja: `dotnet ef migrations add <Nazwa> --project src/FlowHub.Infrastructure --startup-project src/FlowHub.Infrastructure --output-dir Persistence/Migrations`. |
+| **Repo demonstracyjne `demo://`** w `repos.yaml` | Bez dostępu do TFS skrypt klonowania tworzy lokalne repo-atrapę. W pracy podmieniasz adresy. |
+
+**Nie sprawdzone:** przeciąganie kart prawdziwą myszą (podgląd nie emuluje natywnego drag & drop). Logika upuszczenia i zapis w API są sprawdzone zdarzeniami.

@@ -1,0 +1,122 @@
+# Błąd: jak zadanie biznesowe, ale z analizą przyczyny przed poprawką.
+type: Bug
+name: Błąd
+version: 1
+flow:
+  - id: create-folder
+    name: Utworzenie folderu zadania
+    kind: Script
+    script: scripts/create-folder.ps1
+    requiresApproval: false
+
+  - id: clone-repo
+    name: Pobranie repo
+    kind: Script
+    script: scripts/clone-repo.ps1
+    perRepo: true
+    requiresApproval: false
+
+  - id: create-branch
+    name: Utworzenie brancha
+    kind: Script
+    script: scripts/create-branch.ps1
+    perRepo: true
+    requiresApproval: false
+
+  - id: copy-blocks
+    name: Kopiowanie agentów i skilli
+    kind: Script
+    script: scripts/copy-blocks.ps1
+    perRepo: true
+    requiresApproval: false
+
+  - id: analyze-tech
+    name: Analiza technologiczna
+    kind: Agent
+    agent: analiza-technologii
+    prompt: prompts/analiza-technologii.md
+    model: tier:cheap
+    tokenBudget: 30000
+    perRepo: true
+    allowedTools: [read, "shell(git:*)"]
+    outputs: ["context-{repo}.md"]
+
+  - id: root-cause
+    name: Analiza przyczyny błędu
+    kind: Agent
+    agent: analiza-przyczyny
+    prompt: prompts/analiza-przyczyny.md
+    model: tier:standard
+    tokenBudget: 80000
+    allowedTools: [read, "shell(git:*)"]
+    inputs: ["context-*.md"]
+    outputs: [root-cause.md]
+
+  - id: plan
+    name: Planowanie poprawki
+    kind: Agent
+    agent: planowanie
+    prompt: prompts/planowanie.md
+    model: tier:cheap
+    tokenBudget: 40000
+    allowedTools: [read]
+    inputs: ["context-*.md", root-cause.md]
+    outputs: [plan.md]
+
+  - id: choose-model
+    name: Wybór modelu do realizacji
+    kind: Manual
+    checklist:
+      - Przeczytałem plan.md i root-cause.md
+      - Model i budżet kroku „Poprawka” są ustawione (sugestia jest w planie)
+
+  - id: implement
+    name: Poprawka i testy
+    kind: Agent
+    agent: realizacja
+    prompt: prompts/realizacja.md
+    model: tier:standard
+    tokenBudget: 150000
+    perRepo: true
+    allowedTools: [read, write, "shell(git:*)", "shell(dotnet:*)", "shell(npm:*)"]
+    inputs: [plan.md, root-cause.md, "context-{repo}.md"]
+    outputs: ["summary-{repo}.md"]
+
+  - id: test
+    name: Testowanie
+    kind: Script
+    script: scripts/run-tests.ps1
+    perRepo: true
+
+  - id: architecture-notes
+    name: Opis zmian dla architektów
+    kind: Agent
+    agent: opis-dla-architektow
+    prompt: prompts/opis-dla-architektow.md
+    model: tier:cheap
+    tokenBudget: 30000
+    allowedTools: [read, "shell(git:*)"]
+    inputs: [plan.md, "summary-*.md"]
+    outputs: [architecture-notes.md]
+
+  - id: teams
+    name: Wiadomość na Teams z PR
+    kind: Agent
+    agent: komunikacja
+    prompt: prompts/teams.md
+    model: tier:cheap
+    tokenBudget: 10000
+    allowedTools: [read]
+    inputs: [architecture-notes.md, templates/teams.md]
+    outputs: [teams.md]
+
+  - id: retro
+    name: Retro
+    kind: Agent
+    agent: retro
+    prompt: prompts/retro.md
+    model: tier:cheap
+    tokenBudget: 20000
+    allowedTools: [read]
+    inputs: [plan.md, "summary-*.md"]
+    outputs: [retro.md]

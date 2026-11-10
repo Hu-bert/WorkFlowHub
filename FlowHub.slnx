@@ -8,5 +8,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FlowHub.Api.Tests/FlowHub.Api.Tests.csproj" />
+    <Project Path="tests/FlowHub.Application.Tests/FlowHub.Application.Tests.csproj" />
+    <Project Path="tests/FlowHub.Domain.Tests/FlowHub.Domain.Tests.csproj" />
   </Folder>
 </Solution>
