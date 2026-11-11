@@ -43,3 +43,6 @@ else {
 }
 
 Write-Output "Repo $name gotowe: $path"
+
+# Jawny kod wyjścia: wcześniejsze polecenia git mogły zostawić $LASTEXITCODE różny od 0.
+exit 0

@@ -39,6 +39,7 @@ app.MapFlowEndpoints();
 app.MapRepositoryEndpoints();
 app.MapWorkItemEndpoints();
 app.MapStepEndpoints();
+app.MapAgentEndpoints();
 app.MapHub<LiveHub>(LiveHub.Route);
 app.MapFallbackToFile("index.html");
 

@@ -1,6 +1,6 @@
 import { HubConnectionBuilder, LogLevel, type HubConnection } from '@microsoft/signalr'
 
-import type { WorkItemDetails } from './types'
+import type { PermissionRequest, WorkItemDetails } from './types'
 
 let connection: HubConnection | null = null
 
@@ -21,3 +21,9 @@ export const onWorkItemChanged = (handler: (item: WorkItemDetails) => void) =>
 
 export const onStepOutput = (handler: (workItemId: string, stepRunId: string, text: string) => void) =>
   liveConnection().on('stepOutput', handler)
+
+export const onPermissionRequested = (handler: (request: PermissionRequest) => void) =>
+  liveConnection().on('permissionRequested', handler)
+
+export const onPermissionResolved = (handler: (request: PermissionRequest) => void) =>
+  liveConnection().on('permissionResolved', handler)

@@ -34,6 +34,7 @@ const isProposed = computed(() => props.step.status === 'Proposed')
 const isActive = computed(() => props.step.status === 'Approved' || props.step.status === 'Running')
 const isDone = computed(() => ['Succeeded', 'Failed', 'Skipped'].includes(props.step.status))
 const output = computed(() => detail.outputOf(props.step))
+const permission = computed(() => detail.permissionFor(props.step))
 
 const dirty = computed(
   () =>
@@ -116,6 +117,17 @@ const approveLabel = computed(() => (props.step.kind === 'Manual' ? 'Potwierdzam
 
     <!-- W trakcie -->
     <template v-if="isActive">
+      <v-alert v-if="permission" type="warning" variant="tonal" prominent title="Agent prosi o zgodę" class="permission">
+        <div>
+          Narzędzie: <strong>{{ permission.tool }}</strong>
+        </div>
+        <div class="pre">{{ permission.detail }}</div>
+        <div class="actions mt-3">
+          <v-btn color="success" variant="flat" prepend-icon="mdi-check" @click="detail.decide(permission, true)">Zezwól</v-btn>
+          <v-btn color="error" variant="tonal" prepend-icon="mdi-close" @click="detail.decide(permission, false)">Odmów</v-btn>
+        </div>
+      </v-alert>
+
       <ConsoleOutput :text="output" running />
       <div class="actions">
         <v-btn color="error" variant="tonal" prepend-icon="mdi-stop" @click="detail.cancel(step)">Przerwij</v-btn>

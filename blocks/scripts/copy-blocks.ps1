@@ -46,3 +46,6 @@ foreach ($kind in 'agents', 'skills') {
 }
 
 Write-Output "Repo $($env:FLOWHUB_REPO_NAME): skopiowano $copied plików, pominięto $skipped."
+
+# Jawny kod wyjścia: wcześniejsze polecenia git mogły zostawić $LASTEXITCODE różny od 0.
+exit 0

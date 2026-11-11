@@ -28,6 +28,7 @@ public sealed class FlowHubApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:FlowHub", $"Data Source={Path.Combine(_tempDirectory, "test.db")};Pooling=False");
         builder.UseSetting("Workspace:WorkDirectory", WorkDirectory);
+        builder.UseSetting("Agent:FakeDelayMs", "0");
     }
 
     protected override void Dispose(bool disposing)

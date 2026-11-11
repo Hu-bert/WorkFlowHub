@@ -10,5 +10,4 @@ public sealed class IntegrationsOptions
     public string Ci { get; init; } = IntegrationMode.Fake;
     public string Deploy { get; init; } = IntegrationMode.Fake;
     public string Docs { get; init; } = IntegrationMode.Fake;
-    public string AgentRunner { get; init; } = IntegrationMode.Fake;
 }

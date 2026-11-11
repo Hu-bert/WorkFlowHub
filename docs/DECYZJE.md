@@ -37,4 +37,21 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 | **Po restarcie aplikacji** krok „w trakcie” dostaje status Błąd, a „zatwierdzony” wraca do akceptacji | Proces skryptu/agenta nie przeżywa restartu — decyzja wraca do Ciebie. |
 | **Bloczki w repo zadania trafiają do `.git/info/exclude`**; śledzonych plików repo nie nadpisujemy | Agenci i skille FlowHub nie wejdą do PR ani nie zepsują własnych plików repo. |
 
+## Faza 4 — agent Copilot
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Wybór agenta: `Agent:Runner` = `Fake` \| `CopilotCli`** (zamiast `Integrations:AgentRunner`) | Agent leży w warstwie Infrastructure, nie Integrations — osobna sekcja konfiguracji jest czytelniejsza. Reszta ustawień: `Agent:CliPath`, `Agent:FakeDelayMs`. |
+| **Copilot przez CLI (`copilot -p … --output-format json`), bez SDK** | SDK nie potwierdza zdarzenia z tokenami, a CLI nie ma na tej maszynie. Jedna ścieżka do dopracowania w pracy zamiast dwóch niesprawdzonych. `IAgentRunner` pozwala dodać SDK później bez zmian w silniku. |
+| **Zgoda w UI przed każdą sesją z `write` lub `shell`** (Fake i CLI) | Wymóg bezpieczeństwa. CLI w trybie `-p` nie zadaje pytań w trakcie, więc pytamy raz przed startem; narzędzia i tak są ograniczone do listy kroku (`--allow-tool`). Nigdy `--allow-all`. |
+| **Sesja startuje w repo, katalog zadania przez `--add-dir`** | Copilot szuka agentów i skilli w `.github/` repo. Pliki wynikowe (`plan.md` itd.) lądują w katalogu zadania. |
+| **Prompt = szablon z `blocks/prompts` + lista plików wejściowych i wynikowych** | Kontekst idzie plikami, nie rozmową — każdy krok to osobna, krótka sesja. Krok kończy się błędem, jeśli agent nie utworzył oczekiwanego pliku. |
+| **„Rozmowa” z agentem = „Powtórz z uwagą”** (nowa sesja z dopisaną uwagą) | Interaktywny terminal (xterm + ConPTY) wymaga prawdziwego CLI do zbudowania i sprawdzenia — do zrobienia w pracy. |
+
+**Nie sprawdzone — do zrobienia w pracy przy pierwszym uruchomieniu z `Agent:Runner = CopilotCli`:**
+1. Nazwy zdarzeń i pól w JSONL (`CopilotJsonlParser.cs`) — przyjęte z dokumentacji SDK, nie z prawdziwego wyjścia CLI. Nieznane linie są pokazywane w konsoli, więc od razu będzie widać, co trzeba dopasować.
+2. Czy CLI podaje zużycie tokenów w JSONL. Jeśli nie — plan B: `~/.copilot/session-state/<id>/events.jsonl`.
+3. Pola frontmattera agentów (`tools`, `model`) — patrz `docs/copilot-cli.md`.
+4. Jeśli `copilot` to skrypt `.cmd` (instalacja przez npm), ustaw w `Agent:CliPath` pełną ścieżkę do `copilot.exe` (instalacja przez winget).
+
 **Nie sprawdzone:** przeciąganie kart prawdziwą myszą (podgląd nie emuluje natywnego drag & drop). Logika upuszczenia i zapis w API są sprawdzone zdarzeniami.

@@ -21,7 +21,7 @@ public sealed class DependencyInjectionTests(FlowHubApiFactory factory) : IClass
         var options = factory.Services.GetRequiredService<IOptions<IntegrationsOptions>>().Value;
 
         Assert.All(
-            [options.TaskSource, options.PullRequests, options.Ci, options.Deploy, options.Docs, options.AgentRunner],
+            [options.TaskSource, options.PullRequests, options.Ci, options.Deploy, options.Docs],
             mode => Assert.Equal(IntegrationMode.Fake, mode));
     }
 }

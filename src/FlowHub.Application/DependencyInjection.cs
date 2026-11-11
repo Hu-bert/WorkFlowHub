@@ -1,3 +1,4 @@
+using FlowHub.Application.Agents;
 using FlowHub.Application.Engine;
 using FlowHub.Application.Engine.Scripts;
 using FlowHub.Application.Flows;
@@ -15,6 +16,7 @@ public static class DependencyInjection
         services.AddSingleton<WorkspacePaths>();
         services.AddSingleton<FlowCatalog>();
         services.AddScoped<WorkItemService>();
+        services.AddScoped<WorkItemFiles>();
 
         return services.AddFlowEngine();
     }
@@ -33,6 +35,10 @@ public static class DependencyInjection
         // Wykonawcy kroków. Nowy rodzaj kroku = nowa linia tutaj.
         services.AddScoped<IStepExecutor, ScriptStepExecutor>();
         services.AddScoped<IStepExecutor, ManualStepExecutor>();
+        services.AddScoped<IStepExecutor, AgentStepExecutor>();
+
+        services.AddSingleton<AgentPromptBuilder>();
+        services.AddSingleton<PermissionBroker>();
 
         return services;
     }
