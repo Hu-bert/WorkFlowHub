@@ -76,6 +76,7 @@ public sealed class AgentPromptBuilder(IBlockLibrary blocks)
             ["repo.path"] = repo?.LocalPath,
             ["repo.branch"] = repo?.Branch,
             ["repos"] = string.Join(", ", item.Repos.Select(taskRepo => $"{taskRepo.RepositoryName} ({taskRepo.LocalPath})")),
+            ["stats"] = TaskStatistics.For(item, context.Step),
         };
 
         return values.Aggregate(template, (text, pair) => text.Replace("{{" + pair.Key + "}}", pair.Value ?? ""));

@@ -19,16 +19,11 @@ const system = useSystemStore()
       <v-list-item
         v-for="item in navigation"
         :key="item.to"
-        :to="item.comingInPhase ? undefined : item.to"
-        :disabled="!!item.comingInPhase"
+        :to="item.to"
         :prepend-icon="item.icon"
         :title="item.label"
         rounded="lg"
-      >
-        <template v-if="item.comingInPhase" #append>
-          <small>wkrótce</small>
-        </template>
-      </v-list-item>
+      />
     </v-list>
 
     <template #append>

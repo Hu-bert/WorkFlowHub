@@ -35,6 +35,24 @@ public sealed class FileBlockLibrary(WorkspacePaths paths) : IBlockLibrary
 
     public IReadOnlyList<BlockFile> List() => Kinds.SelectMany(FilesOf).ToList();
 
+    public void WriteText(string relativePath, string content)
+    {
+        var path = FullPath(relativePath);
+        var kind = relativePath.Replace('\\', '/').Split('/')[0];
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+
+        if (Kinds.All(known => known.Kind != kind) || extension is not (".md" or ".ps1"))
+        {
+            throw new DomainException(
+                $"Bloczek musi być plikiem .md lub .ps1 w jednym z katalogów: {string.Join(", ", Kinds.Select(known => known.Kind))}.");
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+        // Skrypty z BOM — inaczej Windows PowerShell 5.1 zepsuje polskie znaki.
+        File.WriteAllText(path, content, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: extension == ".ps1"));
+    }
+
     private IEnumerable<BlockFile> FilesOf((string Kind, string Pattern) kind)
     {
         var directory = Path.Combine(Root, kind.Kind);

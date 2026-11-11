@@ -12,4 +12,7 @@ public interface IBlockLibrary
     string FullPath(string relativePath);
 
     IReadOnlyList<BlockFile> List();
+
+    /// <summary>Zapisuje plik bloczka (nowy albo istniejący). Dozwolone tylko katalogi i rozszerzenia biblioteki.</summary>
+    void WriteText(string relativePath, string content);
 }
