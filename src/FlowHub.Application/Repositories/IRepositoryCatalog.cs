@@ -10,4 +10,7 @@ public interface IRepositoryCatalog
     CodeRepository? Find(string name);
 
     void Reload();
+
+    /// <summary>Dopisuje repo do katalogu (repos.yaml). Gdy repo o tej nazwie już jest — zwraca istniejące.</summary>
+    CodeRepository Add(CodeRepository repository);
 }

@@ -4,6 +4,7 @@ using FlowHub.Application.Engine;
 using FlowHub.Application.Engine.Scripts;
 using FlowHub.Application.Flows;
 using FlowHub.Application.Integrations;
+using FlowHub.Application.Repositories;
 using FlowHub.Application.Settings;
 using FlowHub.Application.Terminal;
 using FlowHub.Application.Tokens;
@@ -50,6 +51,9 @@ public static class DependencyInjection
 
         services.AddSingleton<RepoStatusCache>();
         services.AddScoped<RepoStatusService>();
+        services.AddScoped<BranchStatusService>();
+        services.AddSingleton<LocalRepositoryService>();
+        services.AddSingleton<ISettingsModule, LocalRepositoriesSettingsModule>();
 
         services.AddSingleton<AgentPromptBuilder>();
         services.AddSingleton<PermissionBroker>();

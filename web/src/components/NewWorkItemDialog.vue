@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 
 import { suggestRepositories } from '@/api/catalog'
+import { addRemoteRepository, fetchRemoteRepositories, type RemoteRepository } from '@/api/repositories'
 import { fetchTaskFromTracker } from '@/api/integrations'
 import type { CreateWorkItemRequest, WorkItemDetails } from '@/api/types'
 import { useCatalog } from '@/stores/catalog'
@@ -33,10 +34,41 @@ const flowOptions = computed(() => catalog.flows.map((flow) => ({ title: flow.na
 const repositoryOptions = computed(() => catalog.repositories.map((repository) => repository.name))
 const canSave = computed(() => !!form.key.trim() && !!form.title.trim() && !!form.type && form.repositories.length > 0)
 
+/** Repozytoria z serwera kodu (TFS), których nie ma jeszcze w katalogu — do dodania jednym wyborem. */
+const remote = ref<RemoteRepository[]>([])
+const remoteNote = ref('')
+const remoteOptions = computed(() =>
+  remote.value.filter((repository) => !catalog.repositories.some((known) => known.name === repository.name)).map((repository) => repository.name),
+)
+
+async function loadRemote() {
+  try {
+    remote.value = await fetchRemoteRepositories()
+    remoteNote.value = ''
+  } catch (error) {
+    remote.value = []
+    remoteNote.value = `Lista z TFS niedostępna: ${error instanceof Error ? error.message : error}`
+  }
+}
+
+/** Wybrane repo z TFS trafia do katalogu (repos.yaml) i od razu do zadania. */
+async function pickRemote(name: string | null) {
+  if (!name) return
+  try {
+    const added = await addRemoteRepository(name)
+    await catalog.load(true)
+    form.repositories = [...new Set([...form.repositories, added.name])]
+    notifications.success(`Dodano ${added.name} z TFS do katalogu repo`)
+  } catch (error) {
+    notifications.error(error)
+  }
+}
+
 watch(open, (isOpen) => {
   if (isOpen) {
     Object.assign(form, emptyForm())
     suggestionNote.value = ''
+    void loadRemote()
   }
 })
 
@@ -125,6 +157,17 @@ async function save() {
           <v-btn variant="tonal" color="primary" prepend-icon="mdi-auto-fix" @click="suggest">Zaproponuj</v-btn>
         </div>
         <div v-if="suggestionNote" class="fh-muted note">{{ suggestionNote }}</div>
+
+        <v-autocomplete
+          :model-value="null"
+          :items="remoteOptions"
+          label="Dodaj repo z TFS (spoza katalogu)"
+          prepend-inner-icon="mdi-source-pull"
+          :hint="remoteNote || 'Wybrane repo zostanie dopisane do repos.yaml i dodane do zadania.'"
+          persistent-hint
+          :no-data-text="remoteNote ? 'Brak połączenia z TFS' : 'Wszystkie repo z TFS są już w katalogu'"
+          @update:model-value="pickRemote"
+        />
       </v-card-text>
 
       <v-card-actions>

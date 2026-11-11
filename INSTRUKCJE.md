@@ -323,3 +323,16 @@ Użytkownik zezwolił na **pracę autonomiczną przez kolejne fazy**: każda faz
 12. Retro → `retro.md`
 
 Szablony maila i Teams: `blocks/templates/` (edytowalne).
+
+### Rozszerzenia po fazie 8 (2026-11-11, na prośbę użytkownika)
+
+Fazy 9–12 — szczegóły i lista rzeczy niesprawdzonych w [docs/DECYZJE.md](docs/DECYZJE.md):
+
+- **Ustawienia w aplikacji** (moduły `ISettingsModule`): Copilot CLI, plan i modele, folder repozytoriów, TFS, Jira, TeamCity, Octopus. Zapis poza repo (`%LOCALAPPDATA%\FlowHub`), tokeny szyfrowane, zmiany bez restartu. **Nowe połączenie = nowy moduł ustawień**, nie nowy wpis w `appsettings.json`.
+- **Copilot CLI zainstalowany i sprawdzony** (1.0.109): runner `-p`, tokeny z `--usage-output-file`, powtórka kroku przez `--resume`. Plan „bez limitu” (Copilot Enterprise w pracy) wyłącza budżety.
+- **Terminal Copilota w zadaniu** (xterm.js + ConPTY) — interaktywny CLI, także jako kontynuacja sesji kroku.
+- **Pliki `.md` zadania edytowalne w aplikacji.**
+- **Krok ręczny „co dalej?” po realizacji** (`followUp` w flow) — pętla polecenie → agent → przegląd.
+- **Generator bloczków** (skill / agent / prompt / skrypt na wzór istniejącego) — zawsze szkic do akceptacji.
+- **Repozytoria:** skan lokalnego folderu (np. `C:\tfs`) ze statusami PR / build / wdrożenia oraz wybór repo z TFS przy nowym zadaniu.
+- **Do zrobienia w pracy:** prawdziwe klienty TeamCity i Octopus — po zebraniu próbek wg [docs/polaczenia-w-pracy.md](docs/polaczenia-w-pracy.md).

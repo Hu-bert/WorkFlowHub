@@ -18,6 +18,40 @@ public sealed class YamlRepositoryCatalog(WorkspacePaths paths, ILogger<YamlRepo
 
     public void Reload() => _repositories = Load();
 
+    /// <summary>Dopisuje wpis na końcu pliku — komentarze i ręczne formatowanie repos.yaml zostają nietknięte.</summary>
+    public CodeRepository Add(CodeRepository repository)
+    {
+        Reload();
+        if (Find(repository.Name) is { } existing)
+        {
+            return existing;
+        }
+
+        var file = paths.RepositoriesFile;
+        var text = File.Exists(file) ? File.ReadAllText(file) : "repositories:";
+        if (!text.Contains("repositories:", StringComparison.Ordinal))
+        {
+            text = text.TrimEnd() + Environment.NewLine + "repositories:";
+        }
+
+        var entry = string.Join(Environment.NewLine,
+            "",
+            $"  - name: {Quote(repository.Name)}",
+            $"    url: {Quote(repository.Url)}",
+            $"    defaultBranch: {Quote(repository.DefaultBranch)}",
+            "    ciBuildConfigurations: []",
+            "    keywords: []",
+            "");
+
+        File.WriteAllText(file, text.TrimEnd() + Environment.NewLine + entry);
+        Reload();
+
+        return Find(repository.Name)
+            ?? throw new FlowHub.Domain.DomainException($"Nie udało się dopisać repo '{repository.Name}' do repos.yaml — sprawdź składnię pliku.");
+    }
+
+    private static string Quote(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+
     private List<CodeRepository> Load()
     {
         if (!File.Exists(paths.RepositoriesFile))

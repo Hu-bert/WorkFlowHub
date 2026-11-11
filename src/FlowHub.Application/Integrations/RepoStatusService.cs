@@ -33,9 +33,7 @@ public sealed class RepoStatusCache
 public sealed class RepoStatusService(
     IWorkItemStore store,
     IRepositoryCatalog repositories,
-    IPullRequestService pullRequests,
-    ICiServer ci,
-    IDeployServer deploy,
+    BranchStatusService branches,
     RepoStatusCache cache,
     IOptions<RepoStatusOptions> options,
     TimeProvider clock)
@@ -80,24 +78,13 @@ public sealed class RepoStatusService(
             return Unknown(repo, tests);
         }
 
-        var pullRequest = await pullRequests.GetForBranchAsync(repository, repo.Branch, ct);
-        var builds = await ci.GetBuildsWithChangesAsync(repository, repo.Branch, ct);
-        var changes = await ci.GetChangesAsync(repository, repo.Branch, ct);
-        var deployment = await deploy.GetOverviewAsync(repository, repo.Branch, ct);
-
-        var pullRequestCell = RepoStatusBuilder.PullRequest(pullRequest);
-        var buildCell = RepoStatusBuilder.Build(builds);
-        var environments = deployment?.Environments.Select(RepoStatusBuilder.Environment).ToList() ?? [];
-
-        // „Brak wdrożenia” ani „brak PR” to jeszcze nie problem — do poziomu repo liczą się tylko znane stany.
-        var known = new[] { tests, pullRequestCell, buildCell }
-            .Concat(environments.Select(cell => cell.Status))
-            .Where(cell => cell.Level != HealthLevel.Unknown);
+        var branch = await branches.GetAsync(repository, repo.Branch, ct);
+        var known = BranchStatusService.Known([tests, branch.PullRequest, branch.Build, .. branch.Environments.Select(cell => cell.Status)]);
 
         return new RepoStatus(
             repo.RepositoryName, repo.Branch, repo.LocalPath,
-            tests, pullRequestCell, buildCell, deployment?.Release, environments,
-            RepoStatusBuilder.Worst(known), pullRequest, builds, changes);
+            tests, branch.PullRequest, branch.Build, branch.Release, branch.Environments,
+            RepoStatusBuilder.Worst(known), branch.PullRequestDetails, branch.Builds, branch.Changes);
     }
 
     /// <summary>Ostatni krok skryptowy „per repo” z testami (id kroku zawiera "test").</summary>
