@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 
 import { suggestRepositories } from '@/api/catalog'
+import { fetchTaskFromTracker } from '@/api/integrations'
 import type { CreateWorkItemRequest, WorkItemDetails } from '@/api/types'
 import { useCatalog } from '@/stores/catalog'
 import { useNotifications } from '@/stores/notifications'
@@ -39,6 +40,21 @@ watch(open, (isOpen) => {
   }
 })
 
+const fetching = ref(false)
+
+/** Nowa Jira ma API — tytuł, treść i link wypełniają się same. Zadania ze starej Jiry wpisujesz ręcznie. */
+async function fetchFromTracker() {
+  fetching.value = true
+  try {
+    const task = await fetchTaskFromTracker(form.key.trim())
+    Object.assign(form, { title: task.title, description: task.description, sourceUrl: task.url, source: 'Tracker' })
+  } catch (error) {
+    notifications.error(error)
+  } finally {
+    fetching.value = false
+  }
+}
+
 /** Rozpoznanie repo po słowach kluczowych z katalogu — bez modelu, 0 tokenów. */
 async function suggest() {
   try {
@@ -71,8 +87,19 @@ async function save() {
   <v-dialog v-model="open" max-width="720">
     <v-card title="Nowe zadanie" prepend-icon="mdi-plus-circle-outline">
       <v-card-text class="form">
-        <div class="row">
+        <div class="row key-row">
           <v-text-field v-model="form.key" label="Klucz (np. PROJ-123)" autofocus hide-details />
+          <v-btn
+            variant="tonal"
+            color="primary"
+            prepend-icon="mdi-cloud-download-outline"
+            :disabled="!form.key.trim()"
+            :loading="fetching"
+            title="Nowa Jira: pobierz tytuł i treść przez API. Stara Jira: wklej treść ręcznie."
+            @click="fetchFromTracker"
+          >
+            Pobierz
+          </v-btn>
           <v-select v-model="form.type" :items="flowOptions" label="Typ zadania" hide-details />
         </div>
         <v-text-field v-model="form.title" label="Tytuł" hide-details />
@@ -120,6 +147,11 @@ async function save() {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+.row.key-row {
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
 }
 
 .row.repos {

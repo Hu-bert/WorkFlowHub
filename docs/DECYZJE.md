@@ -65,4 +65,20 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 | **Sugestia modelu z `plan.md` nie ustawia się sama** — krok „Wybór modelu” to checklista, model zmieniasz w propozycji kroku | Automatyczne parsowanie planu byłoby kruche; Ty i tak zatwierdzasz. |
 | **Wykres trendu jako proste słupki CSS** | Bez biblioteki wykresów — mniej zależności. |
 
+## Fazy 6–7 — dashboard zadania i integracje
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Tylko implementacje Fake** dla PR (TFS), CI (TeamCity), wdrożeń (Octopus) i trackera (Jira). Prawdziwych klientów REST nie napisałem. | Bez dostępu do serwerów nie da się ich sprawdzić, a zasada brzmi „nie zgaduj API”. Porty są gotowe (`Application/Integrations/Ports.cs`); prawdziwa implementacja = nowa klasa + jeden wpis w `FlowHub.Integrations/DependencyInjection.cs` + nazwa w `appsettings.json` → `Integrations`. |
+| **Mapowanie między systemami:** repo (`repos.yaml`) → build configuration TC + projekt Octopus, dalej po **nazwie brancha zadania** | Tak opisane w specyfikacji. Powiązanie po hashu commita dojdzie z prawdziwymi klientami. |
+| **Trzy scenariusze danych Fake:** `Shared.Lib` zielony, `Billing.Api` w toku, `Customer.Portal` czerwony (konflikty, 2 nieudane testy) | W UI widać każdy stan komórki. Dane statyczne, jak ustaliliśmy. |
+| **Brak `IDocsPublisher`** | Dokumentacja to Markdown w repo — szkic napisze krok agenta; osobny publikator nie jest potrzebny. |
+| **Krok `Check: pull-request`** przed wiadomością na Teams; zapisuje `pr-<repo>.md` z linkiem | Wiadomość na Teams potrzebuje linku do PR. PR tworzysz sam (push tylko za Twoją zgodą) — krok go znajduje. Sprawdzenia `build` i `deployment` są dostępne, ale nie dodałem ich do flow. |
+| **„Gotowe” = wdrożone na `RepoStatus:ReadyEnvironment`** (domyślnie DEV) | Napisałeś, że środowisko testowe to DEV. Zmienisz w konfiguracji. |
+| **Diff w jednym widoku z kolorami** (nie side-by-side); nowe pliki nieśledzone na osobnej liście | KISS. Do porównywania obok siebie jest przycisk „VS Code”. |
+| **Testy w tabeli = status ostatniego kroku testowego dla repo**, bez liczby testów | Liczba wymagałaby parsowania wyjścia `dotnet test` / `npm test` per technologia. |
+
+**Nie zrobione z Fazy 6:** lista paczek do aktualizacji (`dotnet list package --outdated --vulnerable`) — wymaga sieci i prawdziwego repo .NET; najprościej dodać jako krok `Script`.
+**Nie zrobione z Fazy 7:** „Importuj” katalog repo z TFS/TC/Octopus (wymaga prawdziwych połączeń), pasek „ścieżka zmiany” commit → PR → build → release.
+
 **Nie sprawdzone:** przeciąganie kart prawdziwą myszą (podgląd nie emuluje natywnego drag & drop). Logika upuszczenia i zapis w API są sprawdzone zdarzeniami.

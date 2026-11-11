@@ -1,4 +1,5 @@
 using FlowHub.Application.Agents;
+using FlowHub.Application.Integrations;
 using FlowHub.Application.WorkItems;
 
 namespace FlowHub.Application.Engine;
@@ -17,4 +18,7 @@ public interface ILiveNotifier
 
     /// <summary>Prośba o zgodę już nie czeka (decyzja albo przerwanie kroku).</summary>
     Task PermissionResolvedAsync(PermissionRequest request, CancellationToken ct);
+
+    /// <summary>Odświeżono statusy repo zadania (PR, buildy, wdrożenia).</summary>
+    Task RepoStatusChangedAsync(WorkItemRepoStatus status, CancellationToken ct);
 }

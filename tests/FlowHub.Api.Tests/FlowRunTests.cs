@@ -52,7 +52,7 @@ public sealed class FlowRunTests(FlowHubApiFactory factory) : IClassFixture<Flow
 
         var files = await client.GetAsync<List<WorkItemFile>>($"/api/work-items/{id}/files");
         Assert.Superset(
-            new HashSet<string> { "task.md", "context-Billing.Api.md", "root-cause.md", "plan.md", "summary-Billing.Api.md", "architecture-notes.md", "teams.md", "retro.md" },
+            new HashSet<string> { "task.md", "context-Billing.Api.md", "root-cause.md", "plan.md", "summary-Billing.Api.md", "architecture-notes.md", "pr-Billing.Api.md", "teams.md", "retro.md" },
             files.Select(file => file.Name).ToHashSet());
 
         var plan = await client.GetAsync<FileContent>($"/api/work-items/{id}/files/plan.md");

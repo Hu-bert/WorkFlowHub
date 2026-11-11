@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 
 import type { StepRun } from '@/api/types'
 import BudgetBar from '@/components/BudgetBar.vue'
+import RepoStatusTable from '@/components/RepoStatusTable.vue'
 import StepList from '@/components/StepList.vue'
 import StepPanel from '@/components/StepPanel.vue'
 import TaskFiles from '@/components/TaskFiles.vue'
@@ -108,6 +109,8 @@ async function moveTo(column: string) {
       label="Budżet tokenów zadania"
     />
 
+    <RepoStatusTable :work-item-id="item.summary.id" :refresh-key="item.summary.stepsDone" />
+
     <div class="layout">
       <v-card class="steps">
         <StepList :steps="item.steps" :selected-id="selectedStep?.id ?? null" @select="pickedStepId = $event.id" />
@@ -121,27 +124,12 @@ async function moveTo(column: string) {
           <v-expansion-panel v-if="item.description" title="Treść zadania">
             <v-expansion-panel-text class="description">{{ item.description }}</v-expansion-panel-text>
           </v-expansion-panel>
-          <v-expansion-panel title="Repozytoria i katalog zadania">
+          <v-expansion-panel title="Katalogi na dysku">
             <v-expansion-panel-text>
               <p class="fh-muted">Katalog zadania: {{ item.workDirectory }}</p>
-              <v-table density="compact">
-                <thead>
-                  <tr>
-                    <th>Repo</th>
-                    <th>Rola</th>
-                    <th>Branch</th>
-                    <th>Katalog</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="repo in item.repos" :key="repo.name">
-                    <td class="font-weight-bold">{{ repo.name }}</td>
-                    <td>{{ repo.role === 'Main' ? 'główne' : 'zależne' }}</td>
-                    <td><code>{{ repo.branch }}</code></td>
-                    <td class="fh-muted">{{ repo.localPath }}</td>
-                  </tr>
-                </tbody>
-              </v-table>
+              <p v-for="repo in item.repos" :key="repo.name" class="fh-muted mb-1">
+                {{ repo.name }} ({{ repo.role === 'Main' ? 'główne' : 'zależne' }}): {{ repo.localPath }}
+              </p>
             </v-expansion-panel-text>
           </v-expansion-panel>
         </v-expansion-panels>

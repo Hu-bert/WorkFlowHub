@@ -2,6 +2,7 @@ using FlowHub.Application.Agents;
 using FlowHub.Application.Engine;
 using FlowHub.Application.Engine.Scripts;
 using FlowHub.Application.Flows;
+using FlowHub.Application.Integrations;
 using FlowHub.Application.Tokens;
 using FlowHub.Application.WorkItems;
 using FlowHub.Application.Workspace;
@@ -38,6 +39,10 @@ public static class DependencyInjection
         services.AddScoped<IStepExecutor, ScriptStepExecutor>();
         services.AddScoped<IStepExecutor, ManualStepExecutor>();
         services.AddScoped<IStepExecutor, AgentStepExecutor>();
+        services.AddScoped<IStepExecutor, CheckStepExecutor>();
+
+        services.AddSingleton<RepoStatusCache>();
+        services.AddScoped<RepoStatusService>();
 
         services.AddSingleton<AgentPromptBuilder>();
         services.AddSingleton<PermissionBroker>();

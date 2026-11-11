@@ -4,13 +4,19 @@ import { computed } from 'vue'
 import type { WorkItemSummary } from '@/api/types'
 import { formatCost, formatTokens } from '@/shared/format'
 import { stepStatusPresentation } from '@/shared/stepPresentation'
+import { healthPresentation } from '@/shared/healthPresentation'
 import { useCatalog } from '@/stores/catalog'
+import { useWorkItems } from '@/stores/workItems'
 
 import StatusBadge from './StatusBadge.vue'
 
 const props = defineProps<{ item: WorkItemSummary }>()
 
 const catalog = useCatalog()
+const workItems = useWorkItems()
+
+/** Kropka per repo — bez wchodzenia w zadanie widać, które repo blokuje. */
+const repoLevels = computed(() => workItems.repoLevels[props.item.id] ?? [])
 const progress = computed(() => (props.item.stepsTotal ? (props.item.stepsDone / props.item.stepsTotal) * 100 : 0))
 const finished = computed(() => props.item.stepsTotal > 0 && props.item.stepsDone === props.item.stepsTotal)
 </script>
@@ -41,7 +47,17 @@ const finished = computed(() => props.item.stepsTotal > 0 && props.item.stepsDon
     <v-progress-linear :model-value="progress" color="primary" height="5" rounded />
 
     <div class="bottom fh-muted">
-      <span :title="item.repositories.join(', ')">
+      <span v-if="repoLevels.length" class="dots">
+        <v-icon
+          v-for="repo in repoLevels"
+          :key="repo.repo"
+          :icon="healthPresentation[repo.level].icon"
+          :color="healthPresentation[repo.level].color"
+          :title="`${repo.repo}: ${healthPresentation[repo.level].label}`"
+          size="16"
+        />
+      </span>
+      <span v-else :title="item.repositories.join(', ')">
         <v-icon icon="mdi-source-repository" size="16" /> {{ item.repositories.length }}
       </span>
       <span>{{ item.stepsDone }}/{{ item.stepsTotal }} kroków</span>
