@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue'
 import type { StepRun } from '@/api/types'
 import StepList from '@/components/StepList.vue'
 import StepPanel from '@/components/StepPanel.vue'
+import TaskFiles from '@/components/TaskFiles.vue'
 import { useCatalog } from '@/stores/catalog'
 import { useNotifications } from '@/stores/notifications'
 import { useWorkItemDetail } from '@/stores/workItemDetail'
@@ -107,6 +108,7 @@ async function moveTo(column: string) {
 
       <div class="main">
         <StepPanel v-if="selectedStep" :step="selectedStep" />
+        <TaskFiles :work-item-id="item.summary.id" :refresh-key="item.summary.stepsDone" />
 
         <v-expansion-panels variant="accordion">
           <v-expansion-panel v-if="item.description" title="Treść zadania">

@@ -125,6 +125,26 @@ export interface WorkItemDetails {
   steps: StepRun[]
 }
 
+/** Prośba agenta o zgodę na ryzykowne narzędzie (write, shell). */
+export interface PermissionRequest {
+  id: string
+  workItemId: string
+  stepRunId: string
+  tool: string
+  detail: string
+}
+
+export interface WorkItemFile {
+  name: string
+  size: number
+  modifiedAt: string
+}
+
+export interface FileContent {
+  name: string
+  content: string
+}
+
 export interface CreateWorkItemRequest {
   key: string
   title: string

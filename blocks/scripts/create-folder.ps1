@@ -19,3 +19,6 @@ $($env:FLOWHUB_TASK_DESCRIPTION)
 
 Write-Output "Katalog zadania: $workDir"
 Write-Output "Zapisano task.md"
+
+# Jawny kod wyjścia: wcześniejsze polecenia git mogły zostawić $LASTEXITCODE różny od 0.
+exit 0

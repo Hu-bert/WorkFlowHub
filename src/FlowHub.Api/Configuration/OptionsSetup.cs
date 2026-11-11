@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using FlowHub.Application.Agents;
 using FlowHub.Application.Board;
 using FlowHub.Application.Workspace;
 
@@ -12,6 +13,7 @@ public static class OptionsSetup
         var contentRoot = builder.Environment.ContentRootPath;
 
         builder.Services.Configure<BoardOptions>(builder.Configuration.GetSection(BoardOptions.SectionName));
+        builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection(AgentOptions.SectionName));
         builder.Services.Configure<WorkspaceOptions>(builder.Configuration.GetSection(WorkspaceOptions.SectionName));
 
         // Ścieżki względne w konfiguracji liczymy od katalogu aplikacji, nie od bieżącego katalogu procesu.

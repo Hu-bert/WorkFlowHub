@@ -1,3 +1,4 @@
+using FlowHub.Application.Agents;
 using FlowHub.Application.Engine;
 using FlowHub.Application.WorkItems;
 using Microsoft.AspNetCore.SignalR;
@@ -11,6 +12,8 @@ public sealed class LiveHub : Hub
 
     public const string WorkItemChanged = "workItemChanged";
     public const string StepOutput = "stepOutput";
+    public const string PermissionRequested = "permissionRequested";
+    public const string PermissionResolved = "permissionResolved";
 }
 
 public sealed class SignalRLiveNotifier(IHubContext<LiveHub> hub) : ILiveNotifier
@@ -20,4 +23,10 @@ public sealed class SignalRLiveNotifier(IHubContext<LiveHub> hub) : ILiveNotifie
 
     public Task StepOutputAsync(Guid workItemId, Guid stepRunId, string text, CancellationToken ct) =>
         hub.Clients.All.SendAsync(LiveHub.StepOutput, workItemId, stepRunId, text, ct);
+
+    public Task PermissionRequestedAsync(PermissionRequest request, CancellationToken ct) =>
+        hub.Clients.All.SendAsync(LiveHub.PermissionRequested, request, ct);
+
+    public Task PermissionResolvedAsync(PermissionRequest request, CancellationToken ct) =>
+        hub.Clients.All.SendAsync(LiveHub.PermissionResolved, request, ct);
 }

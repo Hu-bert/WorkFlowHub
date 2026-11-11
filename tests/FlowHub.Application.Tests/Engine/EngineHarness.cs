@@ -1,3 +1,4 @@
+using FlowHub.Application.Agents;
 using FlowHub.Application.Engine;
 using FlowHub.Application.Flows;
 using FlowHub.Application.WorkItems;
@@ -103,6 +104,20 @@ internal sealed class RecordingNotifier : ILiveNotifier
     public Task StepOutputAsync(Guid workItemId, Guid stepRunId, string text, CancellationToken ct)
     {
         Output.Add(text);
+        return Task.CompletedTask;
+    }
+
+    public List<PermissionRequest> Permissions { get; } = [];
+
+    public Task PermissionRequestedAsync(PermissionRequest request, CancellationToken ct)
+    {
+        Permissions.Add(request);
+        return Task.CompletedTask;
+    }
+
+    public Task PermissionResolvedAsync(PermissionRequest request, CancellationToken ct)
+    {
+        Permissions.Remove(request);
         return Task.CompletedTask;
     }
 }

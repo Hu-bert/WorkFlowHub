@@ -7,7 +7,12 @@ import { mountApp, noUsage } from '@/test/mountApp'
 import StepPanel from '../StepPanel.vue'
 
 vi.mock('@/api/steps')
-vi.mock('@/api/live', () => ({ onWorkItemChanged: vi.fn(), onStepOutput: vi.fn() }))
+vi.mock('@/api/live', () => ({
+  onWorkItemChanged: vi.fn(),
+  onStepOutput: vi.fn(),
+  onPermissionRequested: vi.fn(),
+  onPermissionResolved: vi.fn(),
+}))
 
 const step = (overrides: Partial<StepRun> = {}): StepRun => ({
   id: 'step-1',
