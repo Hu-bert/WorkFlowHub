@@ -2,6 +2,7 @@ using FlowHub.Application.Integrations;
 using FlowHub.Application.Repositories;
 using FlowHub.Domain;
 using FlowHub.Domain.Repositories;
+using FlowHub.Integrations.Http;
 
 namespace FlowHub.Api.Endpoints;
 
@@ -10,6 +11,9 @@ public sealed record SuggestRepositoriesRequest(string Text);
 public sealed record AddRemoteRepositoryRequest(string Name);
 
 public sealed record AddLocalRepositoryRequest(string Path);
+
+/// <summary>Wynik diagnostyki: zapytania do serwerów i to, co z nich wyszło.</summary>
+public sealed record Diagnosis(IReadOnlyList<ApiCall> Calls, string? Error, string? PullRequest, string? Build, string? Release);
 
 public static class RepositoryEndpoints
 {
@@ -31,6 +35,30 @@ public static class RepositoryEndpoints
         // Stan brancha repo w TFS / TeamCity / Octopus (dla lokalnych kopii na stronie Repozytoria).
         group.MapGet("/{name}/branch-status", async (string name, string branch, IRepositoryCatalog catalog, BranchStatusService branches, CancellationToken ct) =>
             catalog.Find(name) is { } repository ? Results.Ok(await branches.GetAsync(repository, branch, ct)) : Results.NotFound());
+
+        // Diagnostyka: te same zapytania co wyżej, ale z listą adresów i odpowiedzi serwerów (bez tokenów).
+        group.MapGet("/{name}/diagnose", async (string name, string branch, IRepositoryCatalog catalog, BranchStatusService branches, CancellationToken ct) =>
+        {
+            if (catalog.Find(name) is not { } repository)
+            {
+                return Results.NotFound();
+            }
+
+            var calls = ApiClient.StartTrace();
+            try
+            {
+                var status = await branches.GetAsync(repository, branch, ct);
+                return Results.Ok(new Diagnosis(calls, null, status.PullRequest.Text, status.Build.Text, status.Release));
+            }
+            catch (DomainException error)
+            {
+                return Results.Ok(new Diagnosis(calls, error.Message, null, null, null));
+            }
+        });
+
+        // Podpowiedzi do mapowania repo: build configuration z CI i projekty z serwera wdrożeń.
+        group.MapGet("/ci-configurations", (ICiServer ci, CancellationToken ct) => ci.ListConfigurationsAsync(ct));
+        group.MapGet("/deploy-projects", (IDeployServer deploy, CancellationToken ct) => deploy.ListProjectsAsync(ct));
 
         // Repozytoria widoczne na serwerze kodu (TFS) — do wyboru przy nowym zadaniu.
         group.MapGet("/remote", (IRepositoryDirectory directory, CancellationToken ct) => directory.ListAsync(ct));

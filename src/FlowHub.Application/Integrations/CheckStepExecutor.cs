@@ -52,7 +52,7 @@ public sealed class CheckStepExecutor(
         {
             PullRequestCheck => await CheckPullRequestAsync(context, repository, branch, ct),
             BuildCheck => CheckBuilds(await ci.GetBuildsWithChangesAsync(repository, branch, ct)),
-            DeploymentCheck => CheckDeployment(await deploy.GetOverviewAsync(repository, branch, ct)),
+            DeploymentCheck => CheckDeployment(await deploy.GetOverviewAsync(repository, branch, await ci.GetBuildsWithChangesAsync(repository, branch, ct), ct)),
             var other => StepOutcome.Failure($"Nieznane sprawdzenie '{other}'. Dostępne: {PullRequestCheck}, {BuildCheck}, {DeploymentCheck}."),
         };
 

@@ -71,6 +71,15 @@ public sealed class FakeCiServer : ICiServer
             new(Revision(repository.Name, 2), "Ty", "Test regresyjny", BaseDate.AddHours(2)),
         ]);
 
+    public Task<IReadOnlyList<CiConfiguration>> ListConfigurationsAsync(CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<CiConfiguration>>(
+        [
+            new("Billing_Api_Build", "Build", "Billing.Api"),
+            new("Shared_Lib_Build", "Build", "Shared.Lib"),
+            new("Customer_Portal_Build", "Build", "Customer.Portal"),
+            new("Customer_Portal_E2E", "E2E", "Customer.Portal"),
+        ]);
+
     public Task<IReadOnlyList<BuildStatus>> GetBuildsWithChangesAsync(CodeRepository repository, string branch, CancellationToken ct)
     {
         var scenario = For(repository.Name);
@@ -101,7 +110,14 @@ public sealed class FakeDeployServer : IDeployServer
 {
     private static readonly DateTime BaseDate = new(2026, 11, 10, 12, 0, 0, DateTimeKind.Utc);
 
-    public Task<DeploymentOverview?> GetOverviewAsync(CodeRepository repository, string branch, CancellationToken ct)
+    public Task<IReadOnlyList<DeployProjectInfo>> ListProjectsAsync(CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<DeployProjectInfo>>(
+            [new("Billing.Api", "Billing.Api"), new("Shared.Lib", "Shared.Lib"), new("Customer.Portal", "Customer.Portal")]);
+
+    public Task<IReadOnlyList<string>> ListEnvironmentsAsync(CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<string>>(["DEV", "TEST", "UAT", "PROD"]);
+
+    public Task<DeploymentOverview?> GetOverviewAsync(CodeRepository repository, string branch, IReadOnlyList<BuildStatus> builds, CancellationToken ct)
     {
         var project = repository.DeployProject ?? repository.Name;
         var release = $"{Number(project, 1, 4)}.{Number(project + "minor", 0, 12)}.{Number(branch, 0, 30)}";

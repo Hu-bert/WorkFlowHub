@@ -45,12 +45,29 @@ public enum BuildState
     Failed,
 }
 
+/// <summary>StatusText = opis z serwera CI, np. „Tests failed: 24 (24 new), passed: 194”. Branch = branch, na którym poszedł build.</summary>
 public sealed record BuildStatus(
     string Configuration,
     string Number,
     BuildState State,
     IReadOnlyList<string> FailedTests,
-    string Url);
+    string Url,
+    string? StatusText = null,
+    string? Branch = null);
+
+/// <summary>Build configuration na serwerze CI — do wyboru przy repo w katalogu.</summary>
+public sealed record CiConfiguration(string Id, string Name, string? Project);
+
+/// <summary>Projekt na serwerze wdrożeń — do wyboru przy repo w katalogu.</summary>
+public sealed record DeployProjectInfo(string Slug, string Name);
+
+public sealed record NamedLink(string Name, string Url);
+
+/// <summary>Skróty do repo w systemach firmowych (null / pusta lista = adres nieznany).</summary>
+public sealed record RepositoryLinks(string? Repository, string? PullRequests, IReadOnlyList<NamedLink> Builds, string? Deploy)
+{
+    public static RepositoryLinks None { get; } = new(null, null, [], null);
+}
 
 public enum DeploymentState
 {

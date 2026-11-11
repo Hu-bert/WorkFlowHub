@@ -17,6 +17,18 @@ public sealed class RepoStatusOptions
 
     /// <summary>Środowisko, od którego repo liczy się jako „gotowe” w podsumowaniu zadania.</summary>
     public string ReadyEnvironment { get; init; } = "DEV";
+
+    /// <summary>Pokazywane środowiska, po przecinku (np. „DEV, TEST”). Puste = wszystkie z serwera wdrożeń.</summary>
+    public string? Environments { get; init; }
+
+    /// <summary>
+    /// Nazwa brancha, na którym CI buduje pull request ({id} = numer PR), np. „pull/{id}/merge”.
+    /// Buildy z tego brancha są doliczane do brancha zadania. Puste = nie szukaj.
+    /// </summary>
+    public string? PullRequestBuildBranch { get; init; } = "pull/{id}/merge";
+
+    public IReadOnlyList<string> EnvironmentFilter =>
+        (Environments ?? "").Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }
 
 /// <summary>Pamięć ostatnich statusów — żeby nie odpytywać serwerów przy każdym otwarciu strony.</summary>
@@ -84,7 +96,7 @@ public sealed class RepoStatusService(
         return new RepoStatus(
             repo.RepositoryName, repo.Branch, repo.LocalPath,
             tests, branch.PullRequest, branch.Build, branch.Release, branch.Environments,
-            RepoStatusBuilder.Worst(known), branch.PullRequestDetails, branch.Builds, branch.Changes);
+            RepoStatusBuilder.Worst(known), branch.PullRequestDetails, branch.Builds, branch.Changes, branch.Links);
     }
 
     /// <summary>Ostatni krok skryptowy „per repo” z testami (id kroku zawiera "test").</summary>
@@ -95,6 +107,6 @@ public sealed class RepoStatusService(
     private static RepoStatus Unknown(TaskRepo repo, StatusCell tests)
     {
         var missing = new StatusCell(HealthLevel.Unknown, "Brak w repos.yaml");
-        return new RepoStatus(repo.RepositoryName, repo.Branch, repo.LocalPath, tests, missing, missing, null, [], tests.Level, null, [], []);
+        return new RepoStatus(repo.RepositoryName, repo.Branch, repo.LocalPath, tests, missing, missing, null, [], tests.Level, null, [], [], RepositoryLinks.None);
     }
 }

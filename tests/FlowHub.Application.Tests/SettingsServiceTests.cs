@@ -12,7 +12,7 @@ public sealed class SettingsServiceTests
 
     public SettingsServiceTests()
     {
-        _service = new SettingsService([new DemoModule()], _settings, _secrets);
+        _service = new SettingsService([new DemoModule()], _settings, _secrets, TimeProvider.System);
     }
 
     [Fact]

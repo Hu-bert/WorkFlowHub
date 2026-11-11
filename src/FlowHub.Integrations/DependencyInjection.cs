@@ -4,6 +4,8 @@ using FlowHub.Domain;
 using FlowHub.Integrations.Fake;
 using FlowHub.Integrations.Http;
 using FlowHub.Integrations.Jira;
+using FlowHub.Integrations.Octopus;
+using FlowHub.Integrations.TeamCity;
 using FlowHub.Integrations.Settings;
 using FlowHub.Integrations.Tfs;
 using Microsoft.Extensions.Configuration;
@@ -24,6 +26,8 @@ public static class DependencyInjection
         services.Configure<IntegrationsOptions>(configuration.GetSection(IntegrationsOptions.SectionName));
         services.Configure<TfsOptions>(configuration.GetSection(TfsOptions.SectionName));
         services.Configure<JiraOptions>(configuration.GetSection(JiraOptions.SectionName));
+        services.Configure<TeamCityOptions>(configuration.GetSection(TeamCityOptions.SectionName));
+        services.Configure<OctopusOptions>(configuration.GetSection(OctopusOptions.SectionName));
 
         services.AddHttpClient();
         services.AddSingleton<ApiClient>();
@@ -50,12 +54,17 @@ public static class DependencyInjection
         services.AddChosen<ICiServer>(nameof(IntegrationsOptions.Ci), options => options.Ci, new()
         {
             [IntegrationMode.Fake] = typeof(FakeCiServer),
+            [IntegrationMode.Tfs] = typeof(TfsStatusCiServer),
+            [IntegrationMode.TeamCity] = typeof(TeamCityCiServer),
         });
 
         services.AddChosen<IDeployServer>(nameof(IntegrationsOptions.Deploy), options => options.Deploy, new()
         {
             [IntegrationMode.Fake] = typeof(FakeDeployServer),
+            [IntegrationMode.Octopus] = typeof(OctopusDeployServer),
         });
+
+        services.AddSingleton<IRepositoryLinks, RepositoryLinksBuilder>();
 
         // Karty na stronie „Ustawienia”.
         services.AddSingleton<ISettingsModule, TfsSettingsModule>();
