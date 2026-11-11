@@ -50,6 +50,88 @@ public sealed class YamlRepositoryCatalog(WorkspacePaths paths, ILogger<YamlRepo
             ?? throw new FlowHub.Domain.DomainException($"Nie udało się dopisać repo '{repository.Name}' do repos.yaml — sprawdź składnię pliku.");
     }
 
+    public CodeRepository Save(CodeRepository repository, string? originalName)
+    {
+        Reload();
+        var name = repository.Name.Trim();
+
+        if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new FlowHub.Domain.DomainException("Nazwa repo jest wymagana i nie może zawierać znaków niedozwolonych w nazwie katalogu.");
+        }
+
+        if (string.IsNullOrWhiteSpace(repository.Url))
+        {
+            throw new FlowHub.Domain.DomainException("Adres repo jest wymagany (stamtąd FlowHub klonuje repo do zadania).");
+        }
+
+        var others = GetAll().Where(existing => originalName is null || !string.Equals(existing.Name, originalName, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (others.Any(existing => string.Equals(existing.Name, name, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new FlowHub.Domain.DomainException($"Repo '{name}' już jest w katalogu.");
+        }
+
+        var saved = repository with { Name = name, Url = repository.Url.Trim(), DefaultBranch = string.IsNullOrWhiteSpace(repository.DefaultBranch) ? "main" : repository.DefaultBranch.Trim() };
+        var position = originalName is null ? -1 : GetAll().ToList().FindIndex(existing => string.Equals(existing.Name, originalName, StringComparison.OrdinalIgnoreCase));
+        var all = GetAll().ToList();
+
+        if (position >= 0)
+        {
+            all[position] = saved;
+        }
+        else
+        {
+            all.Add(saved);
+        }
+
+        Write(all);
+        return saved;
+    }
+
+    public bool Remove(string name)
+    {
+        Reload();
+        var remaining = GetAll().Where(existing => !string.Equals(existing.Name, name, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (remaining.Count == GetAll().Count)
+        {
+            return false;
+        }
+
+        Write(remaining);
+        return true;
+    }
+
+    private const string Header =
+        """
+        # Katalog repozytoriów FlowHub — edytuj w aplikacji (strona Repozytoria) albo ręcznie.
+        #   name                   - nazwa repo (nazwa katalogu klonu w zadaniu)
+        #   url                    - adres klonu w TFS
+        #   defaultBranch          - branch, od którego odchodzi branch zadania
+        #   ciBuildConfigurations  - id build configuration w TeamCity
+        #   deployProject          - projekt (slug) w Octopus Deploy; puste = nazwa repo
+        #   keywords               - słowa, po których FlowHub rozpoznaje repo z treści zadania
+
+        """;
+
+    private void Write(List<CodeRepository> repositories)
+    {
+        var file = new RepositoriesFile
+        {
+            Repositories = repositories.Select(repository => new RepositoryEntry
+            {
+                Name = repository.Name,
+                Url = repository.Url,
+                DefaultBranch = repository.DefaultBranch,
+                CiBuildConfigurations = [.. repository.CiBuildConfigurations],
+                DeployProject = string.IsNullOrWhiteSpace(repository.DeployProject) ? null : repository.DeployProject.Trim(),
+                Keywords = [.. repository.Keywords],
+            }).ToList(),
+        };
+
+        File.WriteAllText(paths.RepositoriesFile, Header + (file.Repositories.Count == 0 ? "repositories: []" + Environment.NewLine : YamlFormat.Serializer.Serialize(file)));
+        Reload();
+    }
+
     private static string Quote(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 
     private List<CodeRepository> Load()

@@ -40,6 +40,7 @@ flow:
     perRepo: true
     allowedTools: [read, "shell(git:*)"]
     outputs: ["context-{repo}.md"]
+    remember: true
 
   - id: root-cause
     name: Analiza przyczyny błędu

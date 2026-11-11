@@ -52,7 +52,9 @@ public static class DependencyInjection
         services.AddSingleton<RepoStatusCache>();
         services.AddScoped<RepoStatusService>();
         services.AddScoped<BranchStatusService>();
+        services.AddSingleton<BranchStatusCache>();
         services.AddSingleton<LocalRepositoryService>();
+        services.AddSingleton<RepoMapStore>();
         services.AddSingleton<ISettingsModule, LocalRepositoriesSettingsModule>();
 
         services.AddSingleton<AgentPromptBuilder>();

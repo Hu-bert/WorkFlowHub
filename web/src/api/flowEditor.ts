@@ -16,6 +16,7 @@ export interface StepDocument {
   tokenBudget: number
   requiresApproval: boolean
   perRepo: boolean
+  remember: boolean
   allowedTools: string[]
   inputs: string[]
   outputs: string[]
@@ -65,6 +66,7 @@ export const emptyStep = (kind: StepKind): StepDocument => ({
   tokenBudget: kind === 'Agent' ? 30000 : 0,
   requiresApproval: true,
   perRepo: false,
+  remember: false,
   allowedTools: kind === 'Agent' ? ['read'] : [],
   inputs: [],
   outputs: [],

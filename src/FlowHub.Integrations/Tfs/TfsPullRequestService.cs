@@ -5,34 +5,49 @@ using FlowHub.Domain.Repositories;
 
 namespace FlowHub.Integrations.Tfs;
 
-/// <summary>Pull request brancha zadania z TFS: stan, głosy, nierozwiązane wątki, polityki.</summary>
+/// <summary>Pull request brancha z TFS: stan, głosy, nierozwiązane wątki, polityki.</summary>
 public sealed class TfsPullRequestService(TfsApi api) : IPullRequestService
 {
     public async Task<PullRequestStatus?> GetForBranchAsync(CodeRepository repository, string branch, CancellationToken ct)
     {
-        var repo = Uri.EscapeDataString(repository.Name);
-        var source = Uri.EscapeDataString($"refs/heads/{branch}");
+        var repo = api.Locate(repository);
+        using var found = await FindAsync(repo, branch, ct);
 
-        using var list = await api.GetAsync(
-            $"git/repositories/{repo}/pullrequests?searchCriteria.sourceRefName={source}&searchCriteria.status=all", ct);
-
-        if (list is null || TfsMapper.NewestPullRequest(list.RootElement) is not { } pullRequest)
+        if (found is null || TfsMapper.NewestPullRequest(found.RootElement, repo.Name) is not { } pullRequest)
         {
             return null;
         }
 
         var id = pullRequest.GetProperty("pullRequestId").GetInt32();
-        using var threads = await api.GetAsync($"git/repositories/{repo}/pullRequests/{id}/threads", ct);
+        using var threads = await api.GetAsync(repo.ProjectUrl, $"{repo.ApiPath}/pullRequests/{id}/threads", ct);
 
         return TfsMapper.PullRequest(
             pullRequest,
             threads is null ? 0 : TfsMapper.UnresolvedThreads(threads.RootElement),
-            await PoliciesAsync(pullRequest, id, ct),
-            $"{api.ProjectUrl}/_git/{repo}/pullrequest/{id}");
+            await PoliciesAsync(repo, pullRequest, id, ct),
+            $"{repo.WebUrl}/pullrequest/{id}");
+    }
+
+    /// <summary>
+    /// Szukamy po branchu źródłowym w repo; gdy serwer nie zna repo po nazwie (404), pytamy cały projekt
+    /// i wybieramy PR z tego repo. Branch „pull/123/merge” (tak CI nazywa build PR) to po prostu PR nr 123.
+    /// </summary>
+    private async Task<JsonDocument?> FindAsync(TfsRepository repo, string branch, CancellationToken ct)
+    {
+        if (TfsMapper.PullRequestIdFromBranch(branch) is { } id)
+        {
+            var single = await api.GetAsync(repo.ProjectUrl, $"{repo.ApiPath}/pullrequests/{id}", ct);
+            return single is null ? null : TfsMapper.AsList(single);
+        }
+
+        var criteria = $"searchCriteria.sourceRefName={Uri.EscapeDataString($"refs/heads/{branch}")}&searchCriteria.status=all";
+
+        return await api.GetAsync(repo.ProjectUrl, $"{repo.ApiPath}/pullrequests?{criteria}", ct)
+            ?? await api.GetAsync(repo.ProjectUrl, $"git/pullrequests?{criteria}", ct);
     }
 
     /// <summary>Polityki brancha są w API „preview” — gdy serwer ich nie udostępnia, pokazujemy PR bez nich.</summary>
-    private async Task<IReadOnlyList<PolicyCheck>> PoliciesAsync(JsonElement pullRequest, int id, CancellationToken ct)
+    private async Task<IReadOnlyList<PolicyCheck>> PoliciesAsync(TfsRepository repo, JsonElement pullRequest, int id, CancellationToken ct)
     {
         if (TfsMapper.ProjectId(pullRequest) is not { } projectId)
         {
@@ -42,10 +57,10 @@ public sealed class TfsPullRequestService(TfsApi api) : IPullRequestService
         try
         {
             var artifact = Uri.EscapeDataString($"vstfs:///CodeReview/CodeReviewId/{projectId}/{id}");
-            using var evaluations = await api.GetAsync($"policy/evaluations?artifactId={artifact}", ct, apiVersion: "6.0-preview.1");
+            using var evaluations = await api.GetAsync(repo.ProjectUrl, $"policy/evaluations?artifactId={artifact}", ct, api.PreviewVersion);
             return evaluations is null ? [] : TfsMapper.Policies(evaluations.RootElement);
         }
-        catch (Exception error) when (error is DomainException or HttpRequestException)
+        catch (DomainException)
         {
             return [];
         }
@@ -55,8 +70,29 @@ public sealed class TfsPullRequestService(TfsApi api) : IPullRequestService
 /// <summary>Czyste mapowanie JSON z TFS na modele FlowHub — testowane na przykładowych odpowiedziach.</summary>
 public static class TfsMapper
 {
-    public static JsonElement? NewestPullRequest(JsonElement list) =>
-        Items(list).OrderByDescending(item => item.GetProperty("pullRequestId").GetInt32()).Cast<JsonElement?>().FirstOrDefault();
+    /// <summary>Najnowszy PR z listy; repositoryName zawęża wynik zapytania o cały projekt do jednego repo.</summary>
+    public static JsonElement? NewestPullRequest(JsonElement list, string? repositoryName = null) =>
+        Items(list)
+            .Where(item => repositoryName is null || RepositoryName(item) is not { } name || string.Equals(name, repositoryName, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(item => item.GetProperty("pullRequestId").GetInt32())
+            .Cast<JsonElement?>()
+            .FirstOrDefault();
+
+    /// <summary>„pull/36816/merge” albo „refs/pull/36816/merge” → 36816.</summary>
+    public static int? PullRequestIdFromBranch(string branch)
+    {
+        var parts = branch.Replace("refs/", "", StringComparison.OrdinalIgnoreCase).Split('/');
+        return parts.Length >= 2 && parts[0].Equals("pull", StringComparison.OrdinalIgnoreCase) && int.TryParse(parts[1], out var id) ? id : null;
+    }
+
+    /// <summary>Pojedynczy PR opakowany jak lista — żeby dalej obsługiwać go tak samo.</summary>
+    public static JsonDocument AsList(JsonDocument single)
+    {
+        using (single)
+        {
+            return JsonDocument.Parse($"{{\"value\":[{single.RootElement.GetRawText()}]}}");
+        }
+    }
 
     public static PullRequestStatus PullRequest(JsonElement pullRequest, int unresolvedThreads, IReadOnlyList<PolicyCheck> policies, string url) => new(
         pullRequest.GetProperty("pullRequestId").GetInt32(),
@@ -82,6 +118,9 @@ public static class TfsMapper
         pullRequest.TryGetProperty("repository", out var repository) && repository.TryGetProperty("project", out var project)
             ? Text(project, "id")
             : null;
+
+    private static string? RepositoryName(JsonElement pullRequest) =>
+        pullRequest.TryGetProperty("repository", out var repository) ? Text(repository, "name") : null;
 
     private static PullRequestState State(JsonElement pullRequest) => Text(pullRequest, "status")?.ToLowerInvariant() switch
     {

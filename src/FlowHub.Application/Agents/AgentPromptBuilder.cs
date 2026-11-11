@@ -1,6 +1,7 @@
 using System.Text;
 using FlowHub.Application.Blocks;
 using FlowHub.Application.Engine;
+using FlowHub.Application.Repositories;
 
 namespace FlowHub.Application.Agents;
 
@@ -8,7 +9,7 @@ namespace FlowHub.Application.Agents;
 /// Buduje prompt kroku Agent z szablonu (blocks/prompts) i kontekstu zadania.
 /// Kontekst przekazujemy plikami (wejścia/wyjścia), nie całą rozmową — krótszy prompt, mniej tokenów.
 /// </summary>
-public sealed class AgentPromptBuilder(IBlockLibrary blocks)
+public sealed class AgentPromptBuilder(IBlockLibrary blocks, RepoMapStore? maps = null)
 {
     public string Build(StepContext context)
     {
@@ -17,8 +18,32 @@ public sealed class AgentPromptBuilder(IBlockLibrary blocks)
 
         AppendFiles(prompt, "Pliki wejściowe (przeczytaj zamiast skanować repo od nowa)", InputFiles(context));
         AppendFiles(prompt, "Pliki wynikowe (utwórz dokładnie te pliki)", OutputFiles(context));
+        AppendRememberedMap(prompt, context);
 
         return prompt.ToString();
+    }
+
+    /// <summary>Zapamiętana mapa repo dla tego kroku (krok z `remember: true`, „per repo”) albo null.</summary>
+    public RepoMap? RememberedMap(StepContext context) =>
+        context.Definition.Remember && context.Step.RepoName is { } repo ? maps?.Find(repo) : null;
+
+    /// <summary>Gdy mamy mapę repo z wcześniejszego zadania, agent ją aktualizuje — to dużo tańsze niż analiza od zera.</summary>
+    private void AppendRememberedMap(StringBuilder prompt, StepContext context)
+    {
+        if (RememberedMap(context) is not { } map)
+        {
+            return;
+        }
+
+        var since = map.Commit is null ? "" : $", stan repo: commit {map.Commit}";
+        var diff = map.Commit is null
+            ? "Sprawdź ostatnie zmiany w repo (git log)"
+            : $"Sprawdź tylko to, co zmieniło się od tamtego commita (git log {map.Commit}..HEAD --stat)";
+
+        prompt.AppendLine().AppendLine()
+            .AppendLine($"UWAGA — to repo ma już zapisaną mapę (z {map.SavedAt:yyyy-MM-dd}{(map.TaskKey is null ? "" : $", zadanie {map.TaskKey}")}{since}).")
+            .AppendLine("Jej treść jest już w pliku wynikowym. NIE analizuj repo od zera.")
+            .AppendLine($"{diff}, popraw nieaktualne fragmenty i dopisz to, co ważne dla bieżącego zadania. Resztę zostaw bez zmian.");
     }
 
     /// <summary>Pełne ścieżki plików, które krok ma utworzyć w katalogu zadania.</summary>

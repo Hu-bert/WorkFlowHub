@@ -30,6 +30,8 @@ export interface SettingsModule {
 export interface ConnectionTest {
   ok: boolean
   message: string
+  /** false = moduł nie jest jeszcze ustawiony (to nie błąd). */
+  configured?: boolean
 }
 
 export const fetchSettings = () => getJson<SettingsModule[]>('/api/settings')
@@ -39,3 +41,16 @@ export const saveSettings = (moduleId: string, values: Record<string, string | n
   putJson<SettingsModule>(`/api/settings/${moduleId}`, { values })
 
 export const testSettings = (moduleId: string) => postJson<ConnectionTest>(`/api/settings/${moduleId}/test`)
+
+/** Stan połączenia: Fake = atrapa (dane przykładowe), Ok = działa, Failed = nie działa. */
+export interface ConnectionStatus {
+  id: string
+  title: string
+  icon: string
+  state: 'Fake' | 'Ok' | 'Failed' | 'NotConfigured'
+  message: string
+  checkedAt: string | null
+}
+
+/** refresh = sprawdź teraz (bez tego serwer oddaje wynik sprzed najwyżej kilku minut). */
+export const fetchConnectionStatus = (refresh = false) => getJson<ConnectionStatus[]>(`/api/settings/status?refresh=${refresh}`)

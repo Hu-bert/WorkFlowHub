@@ -58,7 +58,7 @@ public sealed class RepoStatusBuilderTests
         RepoStatus Repo(string name, HealthLevel dev) => new(
             name, "b", "p", new(HealthLevel.Ok, ""), new(HealthLevel.Ok, ""), new(HealthLevel.Ok, ""), "1.0",
             [new EnvironmentCell("DEV", new StatusCell(dev, "")), new EnvironmentCell("TEST", new StatusCell(HealthLevel.Unknown, "—"))],
-            HealthLevel.Ok, null, [], []);
+            HealthLevel.Ok, null, [], [], RepositoryLinks.None);
 
         var summary = RepoStatusBuilder.Summary([Repo("A", HealthLevel.Ok), Repo("B", HealthLevel.Ok), Repo("C", HealthLevel.Pending)], "dev");
 

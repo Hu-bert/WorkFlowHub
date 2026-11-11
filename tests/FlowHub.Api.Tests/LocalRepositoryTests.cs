@@ -42,7 +42,7 @@ public sealed class LocalRepositoryTests(FlowHubApiFactory factory) : IClassFixt
     }
 
     private LocalRepositoryService Scanner(string scanRoot, IRepositoryCatalog catalog) =>
-        new(Options.Create(new LocalRepositoriesOptions { ScanRoot = scanRoot }), new GitCliService(), catalog);
+        new(Options.Create(new LocalRepositoriesOptions { ScanRoot = scanRoot }), new GitCliService(), catalog, TimeProvider.System);
 
     private string CreateRepository(string relativePath, string branch, string? origin, string commitMessage)
     {
@@ -122,6 +122,42 @@ public sealed class LocalRepositoryTests(FlowHubApiFactory factory) : IClassFixt
         Assert.Empty(catalog.GetAll());
     }
 
+    [Fact]
+    public async Task Scan_is_remembered_until_refresh_but_the_catalog_match_is_always_current()
+    {
+        var catalog = Catalog("repositories: []\n");
+        CreateRepository("Shared.Lib", "main", "https://tfs.example/col/P/_git/Shared.Lib", "Start");
+        var scanner = Scanner(Path.Combine(_root, "tfs"), catalog);
+
+        var first = await scanner.ScanAsync(Ct);
+        CreateRepository("Nowe.Repo", "main", null, "Start");
+        catalog.Save(new CodeRepository { Name = "Shared.Lib", Url = "https://tfs.example/col/P/_git/Shared.Lib" }, null);
+        var remembered = await scanner.ScanAsync(Ct);
+        var refreshed = await scanner.ScanAsync(Ct, refresh: true);
+
+        Assert.Single(first.Repositories);
+        Assert.Single(remembered.Repositories);
+        Assert.Equal("Shared.Lib", remembered.Repositories[0].CatalogName); // katalog zmienił się po skanie
+        Assert.Equal(2, refreshed.Repositories.Count);
+    }
+
+    [Fact]
+    public void Catalog_entries_can_be_edited_renamed_and_removed_from_the_app()
+    {
+        var catalog = Catalog("repositories:\n  - name: Stare\n    url: demo://Stare\n");
+
+        catalog.Save(new CodeRepository { Name = "Kcf", Url = " https://tfs/col/P/_git/Kcf ", DefaultBranch = "master", CiBuildConfigurations = ["Kcf_Production"], DeployProject = "kcf", Keywords = ["monitoring"] }, null);
+        catalog.Save(new CodeRepository { Name = "Nowe", Url = "demo://Nowe" }, originalName: "Stare");
+        var removed = catalog.Remove("Nowe");
+
+        var kcf = Assert.Single(catalog.GetAll());
+        Assert.True(removed);
+        Assert.Equal(("Kcf", "https://tfs/col/P/_git/Kcf", "master", "kcf"), (kcf.Name, kcf.Url, kcf.DefaultBranch, kcf.DeployProject));
+        Assert.Equal(["Kcf_Production"], kcf.CiBuildConfigurations);
+        Assert.Throws<DomainException>(() => catalog.Save(new CodeRepository { Name = "kcf", Url = "x" }, null)); // duplikat
+        Assert.Throws<DomainException>(() => catalog.Save(new CodeRepository { Name = "Bez adresu", Url = " " }, null));
+    }
+
     [Theory]
     [InlineData("https://tfs.firma.pl/tfs/Col/Projekt/_git/Billing.Api", "Billing.Api")]
     [InlineData("git@github.com:firma/shared-lib.git", "shared-lib")]
@@ -158,7 +194,7 @@ public sealed class LocalRepositoryTests(FlowHubApiFactory factory) : IClassFixt
     [Fact]
     public async Task Branch_status_shows_pull_request_build_and_deployments_for_any_branch_of_a_catalog_repo()
     {
-        var status = await factory.CreateClient().GetAsync<BranchStatus>("/api/repositories/Shared.Lib/branch-status?branch=feature%2F123");
+        var status = (await factory.CreateClient().GetAsync<CachedBranchStatus>("/api/repositories/Shared.Lib/branch-status?branch=feature%2F123")).Status;
 
         Assert.Equal(HealthLevel.Ok, status.PullRequest.Level);
         Assert.Equal(HealthLevel.Ok, status.Build.Level);

@@ -30,15 +30,15 @@ describe('SettingsModuleCard', () => {
   })
 
   it('never shows a saved token, only that it is set', async () => {
-    const wrapper = await mountApp(SettingsModuleCard, { module: module() })
+    const wrapper = await mountApp(SettingsModuleCard, { module: module(), status: null })
 
     const token = wrapper.find('input[type="password"]')
     expect((token.element as HTMLInputElement).value).toBe('')
-    expect(token.attributes('placeholder')).toContain('Zapisany')
+    expect(wrapper.text()).toContain('Token zapisany')
   })
 
-  it('saves only the changed fields and leaves an untouched token alone', async () => {
-    const wrapper = await mountApp(SettingsModuleCard, { module: module() })
+  it('saves only the changed fields, leaves an untouched token alone and then tests the connection', async () => {
+    const wrapper = await mountApp(SettingsModuleCard, { module: module(), status: null })
 
     await wrapper.find('input[type="text"]').setValue('https://nowy')
     await button(wrapper, 'Zapisz').trigger('click')
@@ -50,7 +50,7 @@ describe('SettingsModuleCard', () => {
 
   it('shows the result of the connection test in words', async () => {
     vi.mocked(testSettings).mockResolvedValue({ ok: false, message: 'zły albo wygasły token' })
-    const wrapper = await mountApp(SettingsModuleCard, { module: module() })
+    const wrapper = await mountApp(SettingsModuleCard, { module: module(), status: null })
 
     await button(wrapper, 'Sprawdź połączenie').trigger('click')
     await flushPromises()

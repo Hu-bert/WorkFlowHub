@@ -30,7 +30,8 @@ public sealed record RepoStatus(
     HealthLevel Level,
     PullRequestStatus? PullRequestDetails,
     IReadOnlyList<BuildStatus> Builds,
-    IReadOnlyList<CiChange> Changes);
+    IReadOnlyList<CiChange> Changes,
+    RepositoryLinks Links);
 
 public sealed record WorkItemRepoStatus(
     Guid WorkItemId,

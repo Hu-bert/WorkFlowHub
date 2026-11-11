@@ -13,6 +13,9 @@ public static class SettingsEndpoints
         // Moduły z polami i wartościami. Sekrety nigdy nie wracają — tylko „ustawiony / nie”.
         group.MapGet("/", (SettingsService settings) => settings.List());
 
+        // Stan połączeń (atrapa / działa / nie działa). ?refresh=true = sprawdź teraz.
+        group.MapGet("/status", (bool? refresh, SettingsService settings, CancellationToken ct) => settings.StatusAsync(refresh ?? false, ct));
+
         group.MapPut("/{module}", (string module, SaveSettingsRequest request, SettingsService settings) =>
             settings.Save(module, request.Values));
 

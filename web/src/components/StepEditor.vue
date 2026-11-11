@@ -69,6 +69,14 @@ const outputs = lines('outputs')
     <div class="switches">
       <v-switch v-model="step.requiresApproval" label="Wymaga mojej akceptacji" color="primary" density="compact" hide-details />
       <v-switch v-model="step.perRepo" label="Osobno dla każdego repo" color="primary" density="compact" hide-details />
+      <v-switch
+        v-if="step.kind === 'Agent' && step.perRepo"
+        v-model="step.remember"
+        label="Zapamiętaj wynik jako mapę repo (kolejne zadania tylko ją aktualizują)"
+        color="primary"
+        density="compact"
+        hide-details
+      />
     </div>
   </div>
 </template>

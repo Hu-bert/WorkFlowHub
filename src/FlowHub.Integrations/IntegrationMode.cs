@@ -6,4 +6,6 @@ public static class IntegrationMode
     public const string Fake = "Fake";
     public const string Tfs = "Tfs";
     public const string Jira = "Jira";
+    public const string TeamCity = "TeamCity";
+    public const string Octopus = "Octopus";
 }

@@ -50,11 +50,18 @@ Adresy TeamCity i Octopus w skrypcie są wg dokumentacji i **nie były sprawdzon
 2. **Octopus:** skąd release „wie”, z którego builda pochodzi — numer wersji = numer buildu? Czy jest osobny kanał / release per branch?
 3. **Mapowanie:** czy nazwa repo w TFS = id build configuration = nazwa projektu w Octopus, czy trzeba to wpisać ręcznie w `repos.yaml` (`ciBuildConfigurations`, `deployProject`)?
 
-## 5. Co już jest, a czego brakuje
+## 5. Co już jest
 
 | System | Stan w FlowHub |
 |---|---|
-| TFS | klient gotowy (pull requesty, komentarze, polityki, lista repo) — do sprawdzenia na serwerze |
-| Jira | klient gotowy (treść zadania) — do sprawdzenia na serwerze |
-| TeamCity | tylko test połączenia; dane z atrapy — klient powstanie z próbek z punktu 3 |
-| Octopus | tylko test połączenia; dane z atrapy — klient powstanie z próbek i odpowiedzi z punktu 4 |
+| TFS | pull requesty, komentarze, polityki, lista repo, **statusy buildów** (źródło buildów „Statusy z TFS”) |
+| Jira | treść zadania |
+| TeamCity | buildy brancha, testy, zmiany — wymaga id build configuration przy repo (Repozytoria → Katalog → Edytuj) |
+| Octopus | release i wdrożenia na środowiska — projekt = nazwa repo albo slug wpisany przy repo |
+
+Żaden klient nie był sprawdzony na prawdziwym serwerze. Najszybsza ścieżka w pracy:
+
+1. Ustawienia → TFS: adres kolekcji, token, „Zapisz i sprawdź”.
+2. Ustawienia → TeamCity / buildy: źródło **„Statusy buildów z TFS”** (nie wymaga niczego więcej).
+3. Repozytoria → przy repo rozwiń wiersz → **„Diagnostyka połączeń”**. Jeśli PR albo build się nie pokazuje, skopiuj wynik („Kopiuj wynik”) — widać w nim, o co FlowHub zapytał i co odpowiedział serwer (bez tokenów).
+4. Dopiero potem TeamCity i Octopus przez REST, jeśli potrzebujesz testów i wdrożeń.

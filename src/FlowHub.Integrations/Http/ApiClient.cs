@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -6,13 +7,36 @@ using FlowHub.Domain;
 
 namespace FlowHub.Integrations.Http;
 
+/// <summary>Jedno zapytanie do serwera firmowego — do diagnostyki („co FlowHub zapytał i co dostał”). Bez tokenów.</summary>
+public sealed record ApiCall(string Url, string Result, long Milliseconds);
+
 /// <summary>Wspólny odczyt JSON z serwerów firmowych. Tylko GET — FlowHub niczego tam nie zmienia.</summary>
 public sealed class ApiClient(IHttpClientFactory factory)
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(20);
+    private static readonly AsyncLocal<List<ApiCall>?> Trace = new();
+
+    /// <summary>Włącza zapis zapytań wykonanych w tym wywołaniu (diagnostyka). Zwraca listę, która będzie się wypełniać.</summary>
+    public static List<ApiCall> StartTrace() => Trace.Value = [];
 
     /// <summary>JSON z adresu albo null przy 404. Inne błędy → czytelny komunikat (bez tokenów).</summary>
     public async Task<JsonDocument?> GetJsonAsync(string url, Action<HttpRequestHeaders> authorize, CancellationToken ct)
+    {
+        var watch = Stopwatch.StartNew();
+        try
+        {
+            var document = await SendAsync(url, authorize, ct);
+            Record(url, document is null ? "404 — nie znaleziono" : "200 OK", watch);
+            return document;
+        }
+        catch (Exception error) when (error is DomainException or HttpRequestException or TaskCanceledException)
+        {
+            Record(url, error.Message, watch);
+            throw error is DomainException ? error : new DomainException($"{Host(url)}: brak połączenia ({error.Message}).");
+        }
+    }
+
+    private async Task<JsonDocument?> SendAsync(string url, Action<HttpRequestHeaders> authorize, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -29,7 +53,7 @@ public sealed class ApiClient(IHttpClientFactory factory)
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new DomainException($"{new Uri(url).Host} odpowiedział {(int)response.StatusCode} {response.ReasonPhrase} ({Explain(response.StatusCode)}).");
+            throw new DomainException($"{Host(url)} odpowiedział {(int)response.StatusCode} {response.ReasonPhrase} ({Explain(response.StatusCode)}).");
         }
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
@@ -40,7 +64,7 @@ public sealed class ApiClient(IHttpClientFactory factory)
         catch (JsonException)
         {
             // Typowe przy wygasłym tokenie: serwer zwraca stronę logowania HTML ze statusem 200.
-            throw new DomainException($"{new Uri(url).Host} zwrócił coś innego niż JSON — zwykle oznacza to nieważny token (strona logowania).");
+            throw new DomainException($"{Host(url)} zwrócił coś innego niż JSON — zwykle oznacza to nieważny token (strona logowania).");
         }
     }
 
@@ -59,10 +83,50 @@ public sealed class ApiClient(IHttpClientFactory factory)
             ? throw new DomainException($"Brak adresu serwera — uzupełnij „{settingName}” w Ustawieniach.")
             : configured.Trim().TrimEnd('/');
 
+    private static void Record(string url, string result, Stopwatch watch) =>
+        Trace.Value?.Add(new ApiCall(url, result, watch.ElapsedMilliseconds));
+
+    private static string Host(string url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : url;
+
     private static string Explain(HttpStatusCode status) => status switch
     {
         HttpStatusCode.Unauthorized => "zły albo wygasły token",
         HttpStatusCode.Forbidden => "token nie ma uprawnień",
         _ => "sprawdź adres i ustawienia",
     };
+}
+
+/// <summary>Krótkie odczyty pól JSON, wspólne dla klientów.</summary>
+internal static class Json
+{
+    public static IEnumerable<JsonElement> Items(JsonElement element, string property) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out var items) && items.ValueKind == JsonValueKind.Array
+            ? items.EnumerateArray()
+            : [];
+
+    public static IEnumerable<JsonElement> Array(JsonElement element) =>
+        element.ValueKind == JsonValueKind.Array ? element.EnumerateArray() : [];
+
+    public static JsonElement? Object(JsonElement element, string property) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Object
+            ? value
+            : null;
+
+    public static string? Text(JsonElement? element, string property) =>
+        element is { ValueKind: JsonValueKind.Object } value && value.TryGetProperty(property, out var text)
+            ? text.ValueKind switch
+            {
+                JsonValueKind.String => text.GetString(),
+                JsonValueKind.Number => text.GetRawText(),
+                _ => null,
+            }
+            : null;
+
+    public static int Number(JsonElement? element, string property) =>
+        element is { ValueKind: JsonValueKind.Object } value && value.TryGetProperty(property, out var number) && number.TryGetInt32(out var result)
+            ? result
+            : 0;
+
+    public static bool Flag(JsonElement? element, string property) =>
+        element is { ValueKind: JsonValueKind.Object } value && value.TryGetProperty(property, out var flag) && flag.ValueKind == JsonValueKind.True;
 }

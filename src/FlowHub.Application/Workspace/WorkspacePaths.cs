@@ -23,6 +23,9 @@ public sealed class WorkspacePaths(IOptions<WorkspaceOptions> options)
     public string BlocksDirectory => Path.Combine(Root, "blocks");
     public string RepositoriesFile => Path.Combine(Root, "repos.yaml");
 
+    /// <summary>Zapamiętane mapy repozytoriów (lokalnie, poza gitem).</summary>
+    public string KnowledgeDirectory => Path.Combine(Root, "knowledge");
+
     public string WorkDirectory { get; } = Path.GetFullPath(
         string.IsNullOrWhiteSpace(options.Value.WorkDirectory)
             ? Path.Combine(options.Value.Root, "work")

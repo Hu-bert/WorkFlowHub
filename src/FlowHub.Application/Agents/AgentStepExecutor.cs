@@ -1,4 +1,6 @@
 using FlowHub.Application.Engine;
+using FlowHub.Application.Git;
+using FlowHub.Application.Repositories;
 using FlowHub.Domain.Flows;
 
 namespace FlowHub.Application.Agents;
@@ -9,7 +11,9 @@ public sealed class AgentStepExecutor(
     AgentPromptBuilder prompts,
     PermissionBroker permissions,
     ModelRouter models,
-    TokenBudget budget) : IStepExecutor
+    TokenBudget budget,
+    RepoMapStore? maps = null,
+    IGitService? git = null) : IStepExecutor
 {
     private const int SummaryMaxLength = 2000;
 
@@ -28,6 +32,7 @@ public sealed class AgentStepExecutor(
         }
 
         var request = Request(context);
+        SeedRememberedMap(context, request);
         var session = new AgentSession(context, log, models, budget);
         await log.WriteAsync($"Model: {request.Model}{Environment.NewLine}", ct);
 
@@ -45,7 +50,40 @@ public sealed class AgentStepExecutor(
         }
 
         var outcome = session.Outcome ?? StepOutcome.Failure("Agent zakończył pracę bez wyniku.");
-        return outcome.Succeeded ? VerifyOutputs(request, outcome) : outcome;
+        outcome = outcome.Succeeded ? VerifyOutputs(request, outcome) : outcome;
+
+        if (outcome.Succeeded)
+        {
+            await RememberMapAsync(context, request, log, ct);
+        }
+
+        return outcome;
+    }
+
+    /// <summary>Mapa repo z poprzedniego zadania trafia do pliku wynikowego — agent ją aktualizuje zamiast pisać od nowa.</summary>
+    private void SeedRememberedMap(StepContext context, AgentRequest request)
+    {
+        if (prompts.RememberedMap(context) is { } map && request.ExpectedOutputs.Count == 1 && !File.Exists(request.ExpectedOutputs[0]))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(request.ExpectedOutputs[0])!);
+            File.WriteAllText(request.ExpectedOutputs[0], map.Content);
+        }
+    }
+
+    /// <summary>Po udanym kroku z `remember: true` zapisujemy wynik jako mapę repo, razem z commitem, którego dotyczy.</summary>
+    private async Task RememberMapAsync(StepContext context, AgentRequest request, IStepLog log, CancellationToken ct)
+    {
+        if (maps is null || !context.Definition.Remember || context.Repo is not { } repo || request.ExpectedOutputs.Count != 1)
+        {
+            return;
+        }
+
+        var commit = git is null || !Directory.Exists(repo.LocalPath)
+            ? null
+            : (await git.DescribeAsync(repo.LocalPath, ct)).RecentCommits.FirstOrDefault()?.Hash;
+
+        maps.Save(repo.RepositoryName, await File.ReadAllTextAsync(request.ExpectedOutputs[0], ct), commit, context.Item.Key);
+        await log.WriteAsync($"{Environment.NewLine}💾 Zapisano mapę repo {repo.RepositoryName} — kolejne zadania zaczną od niej.{Environment.NewLine}", ct);
     }
 
     private AgentRequest Request(StepContext context)
