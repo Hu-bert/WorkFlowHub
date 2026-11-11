@@ -49,6 +49,10 @@ public static class FlowEndpoints
             return Results.NoContent();
         });
 
+        // Generator: szkic nowego bloczka na wzór istniejącego. Niczego nie zapisuje — zapis robi edytor po akceptacji.
+        blocks.MapPost("/generate", (GenerateBlockRequest request, BlockGenerator generator, CancellationToken ct) =>
+            generator.GenerateAsync(request, ct));
+
         return app;
     }
 }

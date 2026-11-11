@@ -166,13 +166,13 @@ public sealed class FlowEngineTests
     [Fact]
     public async Task Step_kind_without_an_executor_waits_with_a_clear_message()
     {
-        var engine = new EngineHarness(Agent("agent-step"));
+        var engine = new EngineHarness(new FlowHub.Application.Flows.StepDocument { Id = "check-step", Kind = "Check", Check = "build" });
 
         await engine.StartAsync();
         await engine.RunQueuedAsync();
 
-        Assert.Equal(StepStatus.Proposed, engine.Step("agent-step").Status);
-        Assert.Contains("Agent nie są jeszcze obsługiwane", engine.Step("agent-step").Proposal);
+        Assert.Equal(StepStatus.Proposed, engine.Step("check-step").Status);
+        Assert.Contains("Check nie są jeszcze obsługiwane", engine.Step("check-step").Proposal);
     }
 
     [Fact]

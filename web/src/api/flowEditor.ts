@@ -1,4 +1,4 @@
-import { getJson, putJson } from './http'
+import { getJson, postJson, putJson } from './http'
 import type { StepKind } from './types'
 
 /** Krok w edytorze — dokładnie to, co trafia do pliku YAML. */
@@ -11,6 +11,7 @@ export interface StepDocument {
   prompt: string | null
   check: string | null
   checklist: string[]
+  followUp: string | null
   model: string | null
   tokenBudget: number
   requiresApproval: boolean
@@ -59,6 +60,7 @@ export const emptyStep = (kind: StepKind): StepDocument => ({
   prompt: null,
   check: null,
   checklist: [],
+  followUp: null,
   model: kind === 'Agent' ? 'tier:cheap' : null,
   tokenBudget: kind === 'Agent' ? 30000 : 0,
   requiresApproval: true,
@@ -67,3 +69,23 @@ export const emptyStep = (kind: StepKind): StepDocument => ({
   inputs: [],
   outputs: [],
 })
+
+export type GeneratedKind = 'agents' | 'skills' | 'prompts' | 'scripts'
+
+export interface GenerateBlockRequest {
+  kind: GeneratedKind
+  name: string
+  description: string
+  examplePath: string | null
+}
+
+/** Szkic nowego bloczka — nie jest zapisany, dopóki użytkownik nie kliknie „Zapisz” w edytorze. */
+export interface BlockDraft {
+  path: string
+  content: string
+  examplePath: string
+  /** true = atrapa agenta (kopia wzorca), false = treść napisał model. */
+  demo: boolean
+}
+
+export const generateBlock = (request: GenerateBlockRequest) => postJson<BlockDraft>('/api/blocks/generate', request)

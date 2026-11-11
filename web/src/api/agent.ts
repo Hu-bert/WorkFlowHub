@@ -1,4 +1,4 @@
-import { getJson, postJson } from './http'
+import { getJson, postJson, putJson } from './http'
 import type { FileContent, PermissionRequest, WorkItemFile } from './types'
 
 export const fetchPermissions = (workItemId: string) =>
@@ -11,3 +11,7 @@ export const fetchFiles = (workItemId: string) => getJson<WorkItemFile[]>(`/api/
 
 export const fetchFile = (workItemId: string, name: string) =>
   getJson<FileContent>(`/api/work-items/${workItemId}/files/${encodeURIComponent(name)}`)
+
+/** Zapisuje poprawiony plik .md zadania (np. plan.md przed realizacją). */
+export const saveFile = (workItemId: string, name: string, content: string) =>
+  putJson<void>(`/api/work-items/${workItemId}/files/${encodeURIComponent(name)}`, { name, content })

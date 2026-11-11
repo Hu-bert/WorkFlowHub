@@ -25,6 +25,10 @@ public static class AgentEndpoints
         app.MapGet("/api/work-items/{id:guid}/files/{name}", async (Guid id, string name, WorkItemFiles files, CancellationToken ct) =>
             await files.ReadAsync(id, name, ct) is { } content ? Results.Ok(new FileContent(name, content)) : Results.NotFound());
 
+        // Edycja pliku .md zadania z poziomu aplikacji.
+        app.MapPut("/api/work-items/{id:guid}/files/{name}", async (Guid id, string name, FileContent file, WorkItemFiles files, CancellationToken ct) =>
+            await files.WriteAsync(id, name, file.Content, ct) ? Results.NoContent() : Results.NotFound());
+
         // Biblioteka bloczków.
         app.MapGet("/api/blocks", (IBlockLibrary blocks) => blocks.List());
 

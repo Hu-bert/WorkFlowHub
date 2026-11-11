@@ -115,6 +115,11 @@ public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogge
         yield return "--no-auto-update";
         yield return "--no-color";
 
+        if (request.ResumeSessionId is { Length: > 0 } session)
+        {
+            yield return $"--resume={session}";
+        }
+
         if (request.Agent is { Length: > 0 } agent)
         {
             yield return "--agent";

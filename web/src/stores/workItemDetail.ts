@@ -93,6 +93,9 @@ export const useWorkItemDetail = defineStore('workItemDetail', () => {
       return stepsApi.approveStep(step.id)
     })
 
+  const followUp = (step: StepRun, remark: string, repo: string | null) =>
+    run(() => stepsApi.followUpStep(step.id, remark.trim(), repo))
+
   const retry = (step: StepRun, remark: string) => run(() => stepsApi.retryStep(step.id, remark.trim() || null))
 
   return {
@@ -108,6 +111,7 @@ export const useWorkItemDetail = defineStore('workItemDetail', () => {
     approve,
     skip,
     retry,
+    followUp,
     cancel,
     decide,
   }

@@ -31,6 +31,7 @@ public static partial class FlowValidator
         }
 
         errors.AddRange(DuplicateIds(flow));
+        errors.AddRange(FollowUps(flow));
         return errors;
     }
 
@@ -82,6 +83,27 @@ public static partial class FlowValidator
             .GroupBy(step => step.Id)
             .Where(group => group.Count() > 1)
             .Select(group => $"Id kroku '{group.Key}' powtarza się {group.Count()} razy — musi być unikalne.");
+
+    /// <summary>followUp musi wskazywać wcześniejszy krok Agent — tylko agentowi da się wysłać polecenie.</summary>
+    private static IEnumerable<string> FollowUps(FlowDocument flow)
+    {
+        for (var index = 0; index < flow.Flow.Count; index++)
+        {
+            var step = flow.Flow[index];
+            if (string.IsNullOrWhiteSpace(step.FollowUp))
+            {
+                continue;
+            }
+
+            var isEarlierAgent = flow.Flow.Take(index).Any(earlier =>
+                earlier.Id == step.FollowUp && TryParseKind(earlier.Kind, out var kind) && kind == StepKind.Agent);
+
+            if (!isEarlierAgent)
+            {
+                yield return $"Krok '{step.Id}': 'followUp: {step.FollowUp}' musi wskazywać wcześniejszy krok rodzaju Agent.";
+            }
+        }
+    }
 
     [GeneratedRegex("^[A-Za-z][A-Za-z0-9]*$")]
     private static partial Regex TypePattern();

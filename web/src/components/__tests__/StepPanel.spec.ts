@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { approveStep, editProposal, retryStep } from '@/api/steps'
+import { approveStep, editProposal, followUpStep, retryStep } from '@/api/steps'
 import type { StepRun } from '@/api/types'
 import { mountApp, noUsage } from '@/test/mountApp'
 
@@ -80,5 +80,26 @@ describe('StepPanel', () => {
 
     expect(wrapper.text()).toContain('Potwierdzam — zrobione')
     expect(wrapper.text()).not.toContain('Budżet tokenów')
+    expect(wrapper.text()).not.toContain('Napisz agentowi')
+  })
+
+  it('review step sends a "what next" instruction back to the agent step named in the flow', async () => {
+    const wrapper = await mountApp(StepPanel, { step: step({ kind: 'Manual', stepId: 'review-implementation', proposal: '☐ Obejrzyj diff' }) })
+    const { useCatalog } = await import('@/stores/catalog')
+    const { useWorkItemDetail } = await import('@/stores/workItemDetail')
+    const definition = (id: string, followUp: string | null) => ({ id, name: id === 'implement' ? 'Realizacja' : id, followUp, perRepo: false })
+    useCatalog().flows = [
+      { type: 'Bug', name: 'Błąd', version: 1, steps: [definition('implement', null), definition('review-implementation', 'implement')] },
+    ] as never
+    useWorkItemDetail().item = { summary: { id: 'item-1', type: 'Bug' }, repos: [], steps: [] } as never
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain('Polecenie dla kroku „Realizacja”')
+
+    await wrapper.findAll('textarea').at(-1)!.setValue('Dopisz test dla niedzieli')
+    await wrapper.findAll('button').find((button) => button.text().includes('Wyślij agentowi'))!.trigger('click')
+
+    expect(followUpStep).toHaveBeenCalledWith('step-1', 'Dopisz test dla niedzieli', null)
+    expect(approveStep).not.toHaveBeenCalled()
   })
 })

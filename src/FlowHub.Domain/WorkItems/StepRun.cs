@@ -102,7 +102,6 @@ public sealed class StepRun
         Result = null;
         Error = null;
         Log = "";
-        SessionId = null;
         Usage = TokenUsage.Empty;
     }
 
@@ -126,6 +125,15 @@ public sealed class StepRun
         TransitionTo(StepStatus.Proposed);
         Remark = string.IsNullOrWhiteSpace(remark) ? null : remark.Trim();
         Attempt++;
+    }
+
+    /// <summary>Krok czeka od nowa na swoją kolej — bo wcześniejszy krok wraca do poprawki.</summary>
+    public void ResetToPending()
+    {
+        if (Status != StepStatus.Pending)
+        {
+            TransitionTo(StepStatus.Pending);
+        }
     }
 
     public void AddUsage(TokenUsage usage) => Usage = Usage.Add(usage);

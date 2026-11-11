@@ -19,6 +19,7 @@ public sealed class StepDocument
     public string? Prompt { get; set; }
     public string? Check { get; set; }
     public List<string> Checklist { get; set; } = [];
+    public string? FollowUp { get; set; }
     public string? Model { get; set; }
     public int TokenBudget { get; set; }
     public bool RequiresApproval { get; set; } = true;
