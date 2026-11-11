@@ -65,6 +65,9 @@ namespace FlowHub.Infrastructure.Persistence.Migrations
                     b.Property<string>("Result")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SessionId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("StartedAt")
                         .HasColumnType("TEXT");
 

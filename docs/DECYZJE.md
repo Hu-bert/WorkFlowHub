@@ -114,3 +114,17 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 2. TeamCity i Octopus mają tylko kartę ustawień z testem połączenia; dane dalej z atrapy.
 3. Szyfrowanie DPAPI działa tylko na Windows (aplikacja jest windowsowa).
 4. Koszt w kredytach AI z CLI (`totalNanoAiu`) nie jest przeliczany na pieniądze.
+
+## Faza 10 — terminal Copilota w aplikacji (2026-11-11)
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Prawdziwy terminal: xterm.js ↔ WebSocket ↔ pseudokonsola Windows (ConPTY)** z interaktywnym `copilot` | Prośba o terminal w aplikacji. Pełny interfejs CLI (pytania o zgodę, `/model`, `/usage`) działa bez pisania własnej nakładki. |
+| **ConPTY przez własne wywołania Win32** (`PseudoConsoleProcess`), bez paczki NuGet | Kilka funkcji systemowych; paczki do PTY dla .NET są słabo utrzymane. Tylko Windows. |
+| **Klient nie podaje polecenia ani ścieżki** — tylko id zadania, repo albo kroku; serwer uruchamia wyłącznie skonfigurowane Copilot CLI w katalogu zadania/repo | Terminal w przeglądarce to zdalne wykonywanie poleceń — zawężamy do minimum. |
+| **WebSocket terminala przyjmuje tylko strony z tego komputera** (nagłówek Origin = localhost) | Inaczej dowolna strona otwarta w przeglądarce mogłaby podłączyć się do terminala. |
+| **„Kontynuuj w terminalu” przy kroku agenta** (`copilot --resume=<id sesji kroku>`) | Id sesji zapisujemy przy kroku (nowa kolumna `SessionId`, migracja `StepSession`). Działa po krokach wykonanych prawdziwym CLI. |
+| **Zgody w terminalu daje sam Copilot** (pytanie w oknie), bez `--allow-all` | Zgodnie z zasadami bezpieczeństwa. |
+
+**Sprawdzone:** start interaktywnego Copilota w repo zadania, pytanie o zaufanie do folderu, pytanie i odpowiedź modelu, zamknięcie okna kończy proces.
+**Nie sprawdzone:** „Kontynuuj w terminalu” na prawdziwej sesji kroku (mechanizm `--resume` jest w dokumentacji CLI), dłuższa praca z edycją plików w terminalu.

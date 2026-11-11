@@ -97,6 +97,8 @@ export interface StepRun {
   startedAt: string | null
   finishedAt: string | null
   usage: TokenUsage
+  /** Id sesji Copilot CLI — jest tylko po kroku wykonanym prawdziwym CLI. */
+  sessionId: string | null
 }
 
 export interface WorkItemSummary {

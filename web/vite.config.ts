@@ -15,6 +15,7 @@ export default defineConfig({
     proxy: {
       '/api': apiUrl,
       '/hubs': { target: apiUrl, ws: true },
+      '/ws': { target: apiUrl, ws: true },
     },
   },
   build: {

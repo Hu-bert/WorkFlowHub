@@ -42,7 +42,8 @@ public sealed record StepRunDto(
     int Attempt,
     DateTime? StartedAt,
     DateTime? FinishedAt,
-    TokenUsageDto Usage);
+    TokenUsageDto Usage,
+    string? SessionId);
 
 /// <summary>Zadanie na liście / karcie kanban.</summary>
 public sealed record WorkItemSummary(
