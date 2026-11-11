@@ -81,4 +81,14 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 **Nie zrobione z Fazy 6:** lista paczek do aktualizacji (`dotnet list package --outdated --vulnerable`) — wymaga sieci i prawdziwego repo .NET; najprościej dodać jako krok `Script`.
 **Nie zrobione z Fazy 7:** „Importuj” katalog repo z TFS/TC/Octopus (wymaga prawdziwych połączeń), pasek „ścieżka zmiany” commit → PR → build → release.
 
+## Faza 8 — edytor flow i retro
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Kolejność kroków strzałkami** (bez drag & drop) | KISS — spec dopuszczał oba warianty. |
+| **Zapis z edytora nadpisuje plik YAML bez komentarzy** | Serializator nie zachowuje komentarzy. Pola i kolejność zostają; historię masz w Git. |
+| **Retro dostaje statystyki zadania w prompcie** (`{{stats}}`: tokeny, koszt, próby, błędy, Twoje uwagi) | Fakty zamiast zgadywania; agent nie ma dostępu do bazy. |
+| **Propozycje z retro wdrażasz ręcznie w edytorze bloczków** (zakładka „Bloczki”), commit robisz sam | Automatyczne nakładanie diffów wygenerowanych przez model i auto-commit są ryzykowne; zasada mówi „zawsze szkic do akceptacji”. |
+| **Edytor bloczków zapisuje tylko `.md` i `.ps1` w `blocks/`** (skrypty z BOM) | Bezpieczeństwo ścieżek + pułapka PowerShell 5.1. |
+
 **Nie sprawdzone:** przeciąganie kart prawdziwą myszą (podgląd nie emuluje natywnego drag & drop). Logika upuszczenia i zapis w API są sprawdzone zdarzeniami.

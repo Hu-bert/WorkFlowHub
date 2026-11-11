@@ -23,6 +23,24 @@ public sealed class FlowCatalog(IFlowStore store, ILogger<FlowCatalog> logger)
 
     public void Reload() => _snapshot = Load();
 
+    /// <summary>Dokument flow do edycji (dokładnie to, co trafi do YAML).</summary>
+    public FlowDocument? FindDocument(string type) => Find(type) is { } flow ? FlowMapper.ToDocument(flow) : null;
+
+    /// <summary>Waliduje i zapisuje flow do pliku YAML. Zwraca błędy; pusta lista = zapisano.</summary>
+    public IReadOnlyList<string> Save(FlowDocument document)
+    {
+        var errors = FlowValidator.Validate(document);
+
+        if (errors.Count == 0)
+        {
+            var fileName = store.Save(document);
+            logger.LogInformation("Zapisano flow {Type} do {File}", document.Type, fileName);
+            Reload();
+        }
+
+        return errors;
+    }
+
     private Snapshot Load()
     {
         var flows = new List<FlowDefinition>();
