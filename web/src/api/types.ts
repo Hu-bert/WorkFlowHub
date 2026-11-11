@@ -50,6 +50,7 @@ export interface StepDefinition {
   tokenBudget: number
   requiresApproval: boolean
   perRepo: boolean
+  remember: boolean
   allowedTools: string[]
   inputs: string[]
   outputs: string[]

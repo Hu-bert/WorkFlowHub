@@ -30,6 +30,18 @@ export interface BuildStatus {
   state: 'Queued' | 'Running' | 'Success' | 'Failed'
   failedTests: string[]
   url: string
+  /** Opis z serwera CI, np. "Tests failed: 24 (24 new), passed: 194". */
+  statusText: string | null
+  /** Branch, na którym poszedł build (np. pull/123/merge). */
+  branch: string | null
+}
+
+/** Skróty do repo w TFS, TeamCity i Octopus (null / pusta lista = adres nieznany). */
+export interface RepositoryLinks {
+  repository: string | null
+  pullRequests: string | null
+  builds: { name: string; url: string }[]
+  deploy: string | null
 }
 
 export interface CiChange {
@@ -52,6 +64,7 @@ export interface RepoStatus {
   pullRequestDetails: PullRequestStatus | null
   builds: BuildStatus[]
   changes: CiChange[]
+  links: RepositoryLinks
 }
 
 export interface WorkItemRepoStatus {

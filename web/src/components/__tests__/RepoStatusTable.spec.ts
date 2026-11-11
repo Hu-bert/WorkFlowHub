@@ -26,6 +26,7 @@ const repo = (name: string, overrides: Partial<RepoStatus> = {}): RepoStatus => 
   pullRequestDetails: null,
   builds: [],
   changes: [],
+  links: { repository: null, pullRequests: null, builds: [], deploy: null },
   ...overrides,
 })
 
@@ -87,7 +88,7 @@ describe('RepoStatusTable', () => {
             hasConflicts: true,
             url: 'u',
           },
-          builds: [{ configuration: 'Portal_Build', number: '12', state: 'Failed', failedTests: ['Checkout.VatRate'], url: 'u' }],
+          builds: [{ configuration: 'Portal_Build', number: '12', state: 'Failed', failedTests: ['Checkout.VatRate'], url: 'u', statusText: null, branch: null }],
         }),
       ]),
     )

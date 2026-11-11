@@ -37,6 +37,12 @@ public sealed record StepDefinition
     /// <summary>Krok uruchamiany osobno dla każdego repo zadania.</summary>
     public bool PerRepo { get; init; }
 
+    /// <summary>
+    /// Agent „per repo”: plik wynikowy jest zapamiętywany dla repo (mapa repo) i w kolejnych zadaniach
+    /// agent dostaje go do aktualizacji zamiast pisać od zera.
+    /// </summary>
+    public bool Remember { get; init; }
+
     public IReadOnlyList<string> AllowedTools { get; init; } = [];
     public IReadOnlyList<string> Inputs { get; init; } = [];
     public IReadOnlyList<string> Outputs { get; init; } = [];

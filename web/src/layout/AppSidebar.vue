@@ -1,11 +1,18 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
+
 import StatusBadge from '@/components/StatusBadge.vue'
 import { connectionPresentation } from '@/shared/connectionState'
+import { connectionPresentationOf, useConnections } from '@/stores/connections'
 import { useSystemStore } from '@/stores/system'
 
 import { navigation } from './navigation'
 
 const system = useSystemStore()
+const connections = useConnections()
+
+// Stan integracji widać z każdej strony; szczegóły i poprawki są w Ustawieniach.
+onMounted(() => connections.load())
 </script>
 
 <template>
@@ -27,6 +34,17 @@ const system = useSystemStore()
     </v-list>
 
     <template #append>
+      <RouterLink v-if="connections.statuses.length" to="/settings" class="connections integrations" title="Stan połączeń — kliknij, żeby przejść do Ustawień">
+        <div class="caption">Integracje</div>
+        <div v-for="status in connections.statuses" :key="status.id" class="connection" :title="status.message">
+          <span class="integration-name">{{ status.title.split(' / ')[0] }}</span>
+          <span class="state" :class="status.state.toLowerCase()">
+            <v-icon :icon="connectionPresentationOf[status.state].icon" size="14" />
+            {{ connectionPresentationOf[status.state].label }}
+          </span>
+        </div>
+      </RouterLink>
+
       <div class="connections">
         <div class="connection">
           <span>API</span>
@@ -79,6 +97,46 @@ const system = useSystemStore()
   border-radius: 12px;
   font-size: 0.85rem;
   color: var(--fh-muted);
+}
+
+.integrations {
+  margin-bottom: 0;
+  text-decoration: none;
+  gap: 0.35rem;
+}
+
+.integrations:hover {
+  border-color: rgba(167, 139, 250, 0.45);
+}
+
+.caption {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.integration-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: none;
+  font-size: 0.75rem;
+}
+
+.state.ok {
+  color: #4ade80;
+}
+
+.state.failed {
+  color: #f87171;
 }
 
 .connection {

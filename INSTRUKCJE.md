@@ -336,3 +336,11 @@ Fazy 9–12 — szczegóły i lista rzeczy niesprawdzonych w [docs/DECYZJE.md](d
 - **Generator bloczków** (skill / agent / prompt / skrypt na wzór istniejącego) — zawsze szkic do akceptacji.
 - **Repozytoria:** skan lokalnego folderu (np. `C:\tfs`) ze statusami PR / build / wdrożenia oraz wybór repo z TFS przy nowym zadaniu.
 - **Do zrobienia w pracy:** prawdziwe klienty TeamCity i Octopus — po zebraniu próbek wg [docs/polaczenia-w-pracy.md](docs/polaczenia-w-pracy.md).
+
+### Po pierwszym użyciu w pracy (2026-11-12) — faza 13
+
+- Serwery: Azure DevOps Server 25H2, TeamCity 2026.1, Octopus 2026.2. Branch zadania np. `ZR-3925-2`; build PR w TeamCity idzie z brancha `pull/<nr>/merge`; numer builda to „wersja #licznik”.
+- Źródła buildów: Atrapa / **Statusy z TFS** / TeamCity REST. Wdrożenia: Atrapa / Octopus REST. Środowiska pokazywane i domyślne ustawia się w Ustawieniach.
+- **Katalog repo edytuje się w aplikacji** (plik `repos.yaml` to tylko miejsce zapisu). Lokalne kopie pokazujemy jako drzewo folderów, z pamięcią wyników.
+- **Mapa repo** (`remember: true`) — analiza jest zapamiętywana w `knowledge/` i aktualizowana w kolejnych zadaniach.
+- Przy problemach z integracją: Repozytoria → „Diagnostyka połączeń”.

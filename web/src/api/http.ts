@@ -37,3 +37,4 @@ async function errorMessage(response: Response): Promise<string> {
 export const getJson = <T>(url: string) => request<T>('GET', url)
 export const postJson = <T>(url: string, body?: unknown) => request<T>('POST', url, body ?? {})
 export const putJson = <T>(url: string, body: unknown) => request<T>('PUT', url, body)
+export const deleteJson = <T>(url: string) => request<T>('DELETE', url)

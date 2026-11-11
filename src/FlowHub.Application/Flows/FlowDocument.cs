@@ -24,6 +24,7 @@ public sealed class StepDocument
     public int TokenBudget { get; set; }
     public bool RequiresApproval { get; set; } = true;
     public bool PerRepo { get; set; }
+    public bool Remember { get; set; }
     public List<string> AllowedTools { get; set; } = [];
     public List<string> Inputs { get; set; } = [];
     public List<string> Outputs { get; set; } = [];

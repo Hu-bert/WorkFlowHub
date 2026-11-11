@@ -19,6 +19,9 @@ public enum ConnectionState
     Fake,
     Ok,
     Failed,
+
+    /// <summary>Moduł nie jest jeszcze ustawiony — nie ma czego sprawdzać.</summary>
+    NotConfigured,
 }
 
 /// <summary>Stan jednego połączenia — do paska statusu i listy w Ustawieniach.</summary>
@@ -100,7 +103,8 @@ public sealed class SettingsService(IEnumerable<ISettingsModule> modules, ISetti
             last = _lastTests[module.Id];
         }
 
-        return new ConnectionStatus(module.Id, module.Title, module.Icon, last!.Result.Ok ? ConnectionState.Ok : ConnectionState.Failed, last.Result.Message, last.At);
+        var state = !last!.Result.Configured ? ConnectionState.NotConfigured : last.Result.Ok ? ConnectionState.Ok : ConnectionState.Failed;
+        return new ConnectionStatus(module.Id, module.Title, module.Icon, state, last.Result.Message, last.At);
     }
 
     /// <summary>Moduł działa na atrapie, gdy każde jego pole wyboru „źródło danych” ma wartość Fake.</summary>

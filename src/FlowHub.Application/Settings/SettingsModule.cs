@@ -22,7 +22,8 @@ public sealed record SettingField(
     string? Hint = null,
     IReadOnlyList<SettingChoice>? Choices = null);
 
-public sealed record ConnectionTest(bool Ok, string Message);
+/// <summary>Configured = false: nie ma czego testować, bo moduł nie jest jeszcze ustawiony (to nie błąd).</summary>
+public sealed record ConnectionTest(bool Ok, string Message, bool Configured = true);
 
 /// <summary>
 /// Moduł ustawień = jedna karta na stronie „Ustawienia” (Copilot, TFS, TeamCity, …).

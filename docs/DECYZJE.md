@@ -158,3 +158,28 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 
 **Sprawdzone:** skan na katalogu `work/` (8 kopii w folderach zadań), statusy z atrap, dodanie repo z listy TFS-atrapy w oknie nowego zadania.
 **Nie sprawdzone:** skan prawdziwego `C:\tfs` (duże repo, worktree), lista repo z prawdziwego TFS, skrypt zbierający próbki na prawdziwych serwerach (sprawdzona tylko składnia).
+
+## Faza 13 — uwagi po pierwszym użyciu w pracy (2026-11-12)
+
+Wersje u użytkownika: Azure DevOps Server 25H2 (patch 9), TeamCity 2026.1, Octopus 2026.2.
+
+| Decyzja | Dlaczego |
+|---|---|
+| **TFS: projekt i nazwa repo brane z adresu repo** (`…/Kolekcja/Projekt/_git/Repo`), nie z jednego projektu w Ustawieniach | Najbardziej prawdopodobny powód „nie widzi PR”: repo w innym projekcie kolekcji albo inna nazwa niż w katalogu. Adres spoza skonfigurowanej kolekcji jest ignorowany — token idzie tylko do niej. |
+| **PR: zapasowe wyszukiwanie w całym projekcie; branch `pull/N/merge` = PR nr N** | Gdy serwer nie zna repo po nazwie. Na zrzucie z TeamCity build PR idzie z brancha `pull/36816/merge`. |
+| **Nowe źródło buildów „Statusy z TFS”** — statusy przy commicie i pull requeście (to, co TFS pokazuje w zakładce Status / Pipelines) | Sugestia użytkownika. Działa bez tokenu TeamCity i bez mapowania build configuration; link prowadzi do builda w TeamCity. |
+| **Klient TeamCity** (buildy brancha także trwające, tekst statusu z licznikami testów, nieudane testy, zmiany) i **klient Octopus** (`progression`: środowiska × release × stan) | Prośba o prawdziwe źródła. Adresy i pola sprawdzone w dokumentacji (TeamCity REST, dokumentacja Octopus i kod oficjalnego klienta). |
+| **Octopus: release dopasowany do brancha** po build information, referencji Git, nazwie brancha w wersji albo wersji z numeru builda (build „1.30.0 #643” → release 1.30.0). Bez dopasowania środowiska są puste; dla brancha domyślnego bierzemy najnowszy release. | Nie pokazujemy cudzego release jako „Twojego”. Regułę trzeba potwierdzić na prawdziwych danych. |
+| **Buildy PR doliczane do brancha** (`RepoStatus:PullRequestBuildBranch`, domyślnie `pull/{id}/merge`) | Inaczej build z Twoimi zmianami byłby niewidoczny przy branchu zadania. |
+| **Środowiska: lista pokazywanych i środowisko domyślne w Ustawieniach** (karta Octopus) | „Nie mam UAT” i „wybór domyślnego DEV”. „Sprawdź połączenie” wypisuje nazwy środowisk z serwera. |
+| **Skróty TFS / PR / TC / Octopus przy każdym repo** | Adresy składane z adresu repo i adresów serwerów z Ustawień — działają też na atrapie danych. |
+| **Diagnostyka połączeń** przy repo: lista zapytań (bez tokenów) i odpowiedzi serwerów, z przyciskiem „Kopiuj wynik” | Bez dostępu do serwerów to jedyny sposób, żeby ustalić, czemu czegoś nie widać. |
+| **Ustawienia: lista modułów po lewej, jeden formularz po prawej**; stan (Atrapa / Działa / Nie działa / Nie ustawiono), „Token zapisany / Brak tokenu”, „Zapisz i sprawdź” | Układ kart „rozjeżdżał się”, nie było widać, czy token się zapisał i czy połączenie działa. |
+| **Stan integracji w pasku bocznym**, odświeżany najwyżej co 5 minut | Widać z każdej strony; kliknięcie prowadzi do Ustawień. |
+| **Repozytoria: zakładka „Moje repozytoria” jako drzewo folderów** (pierwsza), większe wiersze ze statusami | „Mało widoczne” i „jak drzewo katalogów”. |
+| **Skan i statusy pamiętane** (`Repositories:RefreshMinutes`, domyślnie 10 min; także w pamięci strony) | „Za każdym razem się ładuje”. Przycisk „Odśwież teraz” czyta od razu. |
+| **Katalog repo edytowalny w aplikacji** (dodaj / edytuj / usuń, podpowiedzi build configuration i projektów z serwerów) + wyjaśnienie, po co jest | „Nie można edytować repos.yaml” i „nie wiem po co repos.yaml”. Zapis z formularza przepisuje plik (z nagłówkiem), ręczne komentarze przepadają. |
+| **Mapa repo** (`remember: true` na kroku analizy): wynik zapisywany w `knowledge/<repo>.md` z commitem; kolejne zadanie dostaje ją w pliku wynikowym i polecenie „zaktualizuj od commita X” | Żeby nie robić analizy od zera — mniej tokenów. Katalog `knowledge/` jest poza gitem. Mapę można obejrzeć, poprawić i usunąć (Repozytoria → Katalog → Mapa). |
+
+**Nie sprawdzone (brak dostępu do serwerów):** klienty TeamCity i Octopus oraz statusy z TFS — tylko testy mapowania na przykładach z dokumentacji; adresy stron w przeglądarce (parametr `branch` w TeamCity, ścieżki portalu Octopus, `?version=GB…` w TFS); reguła dopasowania release do brancha; aktualizacja mapy repo prawdziwym agentem (sprawdzone na podstawionym).
+**Jeśli coś nie działa:** otwórz repo na stronie Repozytoria → „Diagnostyka połączeń” → „Kopiuj wynik”.

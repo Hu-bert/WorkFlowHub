@@ -36,3 +36,6 @@ design-time.db
 
 # Próbki odpowiedzi API zebrane w pracy (mogą zawierać dane firmowe)
 api-samples/
+
+# Zapamiętane mapy repozytoriów (lokalnie; mogą zawierać opis firmowego kodu)
+knowledge/

@@ -10,6 +10,7 @@ import { useNotifications } from '@/stores/notifications'
 import DiffDialog from './DiffDialog.vue'
 import HealthCell from './HealthCell.vue'
 import StatusBadge from './StatusBadge.vue'
+import SystemLinks from './SystemLinks.vue'
 
 /** Najważniejszy widok zadania: jeden wiersz = jedno repo (testy, PR, build, release, środowiska). */
 const props = defineProps<{ workItemId: string; refreshKey: number }>()
@@ -99,6 +100,7 @@ const voteLabel = { Waiting: 'czeka', Approved: 'zaakceptował', ApprovedWithSug
             <td class="actions" @click.stop>
               <a href="#" @click.prevent="diffRepo = repo.repo">Diff</a> ·
               <a :href="vsCodeLink(repo.localPath)">VS Code</a>
+              <SystemLinks :links="repo.links" class="ml-2" />
             </td>
           </tr>
 

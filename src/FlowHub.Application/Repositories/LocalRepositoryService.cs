@@ -13,6 +13,9 @@ public sealed class LocalRepositoriesOptions
 
     /// <summary>Folder z repozytoriami, np. C:\tfs. Repo może leżeć bezpośrednio w nim albo poziom niżej (folder brancha).</summary>
     public string? ScanRoot { get; init; }
+
+    /// <summary>Przez ile minut pamiętać wynik skanu i statusy z serwerów (potem czytamy od nowa). „Odśwież” czyta od razu.</summary>
+    public int RefreshMinutes { get; init; } = 10;
 }
 
 /// <summary>Lokalna kopia repo znaleziona w folderze. CatalogName = dopasowany wpis z repos.yaml (albo null).</summary>
@@ -26,18 +29,25 @@ public sealed record LocalRepository(
     int UncommittedFiles,
     string? CatalogName);
 
-public sealed record LocalRepositoryScan(string? Root, IReadOnlyList<LocalRepository> Repositories);
+public sealed record LocalRepositoryScan(string? Root, IReadOnlyList<LocalRepository> Repositories, DateTime? ScannedAt = null);
 
 /// <summary>
 /// Przegląda folder z repozytoriami (tylko odczyt): co tam jest, na jakim branchu i z jakimi commitami.
 /// Układ jest dowolny — repo leży luzem w folderze albo w podfolderze nazwanym np. od brancha.
 /// </summary>
-public sealed class LocalRepositoryService(IOptions<LocalRepositoriesOptions> options, IGitService git, IRepositoryCatalog catalog)
+public sealed class LocalRepositoryService(IOptions<LocalRepositoriesOptions> options, IGitService git, IRepositoryCatalog catalog, TimeProvider clock)
 {
+    private sealed record Snapshot(string Root, IReadOnlyList<(string Path, GitWorkingCopy Copy)> Copies, DateTime At);
+
+    private Snapshot? _snapshot;
     /// <summary>Folder główny → repo → repo w folderze brancha. Głębiej nie szukamy (szybko i przewidywalnie).</summary>
     private const int MaxDepth = 2;
 
-    public async Task<LocalRepositoryScan> ScanAsync(CancellationToken ct)
+    /// <summary>
+    /// Wynik skanu jest pamiętany (Repositories:RefreshMinutes), bo przejście po dużym folderze i pytanie Gita
+    /// o każde repo trwa. refresh = czytaj teraz. Dopasowanie do katalogu liczymy zawsze na świeżo.
+    /// </summary>
+    public async Task<LocalRepositoryScan> ScanAsync(CancellationToken ct, bool refresh = false)
     {
         var root = options.Value.ScanRoot?.Trim();
         if (string.IsNullOrEmpty(root))
@@ -50,19 +60,28 @@ public sealed class LocalRepositoryService(IOptions<LocalRepositoriesOptions> op
             throw new DomainException($"Folder repozytoriów '{root}' nie istnieje — popraw go w Ustawieniach.");
         }
 
-        var repositories = new List<LocalRepository>();
-        foreach (var path in FindRepositories(root, MaxDepth).Order(StringComparer.OrdinalIgnoreCase))
+        var snapshot = _snapshot;
+        var lifetime = TimeSpan.FromMinutes(Math.Max(0, options.Value.RefreshMinutes));
+        var now = clock.GetUtcNow().UtcDateTime;
+
+        if (refresh || snapshot is null || snapshot.Root != root || now - snapshot.At >= lifetime)
         {
-            repositories.Add(await DescribeAsync(root, path, ct));
+            var copies = new List<(string, GitWorkingCopy)>();
+            foreach (var path in FindRepositories(root, MaxDepth).Order(StringComparer.OrdinalIgnoreCase))
+            {
+                copies.Add((path, await git.DescribeAsync(path, ct)));
+            }
+
+            _snapshot = snapshot = new Snapshot(root, copies, now);
         }
 
-        return new LocalRepositoryScan(root, repositories);
+        return new LocalRepositoryScan(root, snapshot.Copies.Select(entry => Describe(root, entry.Path, entry.Copy)).ToList(), snapshot.At);
     }
 
     /// <summary>Lokalne repo z folderu → wpis katalogu (nazwa i adres z origin). Nie ufa danym od klienta — skanuje sam.</summary>
     public async Task<CodeRepository> AddToCatalogAsync(string path, CancellationToken ct)
     {
-        var scan = await ScanAsync(ct);
+        var scan = await ScanAsync(ct, refresh: true);
         var local = scan.Repositories.FirstOrDefault(repository => string.Equals(repository.Path, path, StringComparison.OrdinalIgnoreCase))
             ?? throw new DomainException("Tego repo nie ma w folderze repozytoriów.");
 
@@ -79,9 +98,8 @@ public sealed class LocalRepositoryService(IOptions<LocalRepositoriesOptions> op
         return catalog.Add(new CodeRepository { Name = local.Name, Url = local.RemoteUrl });
     }
 
-    private async Task<LocalRepository> DescribeAsync(string root, string path, CancellationToken ct)
+    private LocalRepository Describe(string root, string path, GitWorkingCopy copy)
     {
-        var copy = await git.DescribeAsync(path, ct);
         var name = NameFromUrl(copy.RemoteUrl) ?? System.IO.Path.GetFileName(path);
 
         return new LocalRepository(
@@ -170,14 +188,16 @@ public sealed class LocalRepositoriesSettingsModule(LocalRepositoryService repos
     public IReadOnlyList<SettingField> Fields { get; } =
     [
         new($"{LocalRepositoriesOptions.SectionName}:{nameof(LocalRepositoriesOptions.ScanRoot)}", "Folder repozytoriów", SettingKind.Folder, @"Np. C:\tfs"),
+        new($"{LocalRepositoriesOptions.SectionName}:{nameof(LocalRepositoriesOptions.RefreshMinutes)}", "Odświeżanie co (minut)", SettingKind.Number,
+            "Tak długo strona Repozytoria pamięta wynik skanu i statusy z serwerów. 0 = zawsze od nowa. Przycisk „Odśwież” czyta od razu."),
     ];
 
     public async Task<ConnectionTest> TestAsync(CancellationToken ct)
     {
-        var scan = await repositories.ScanAsync(ct);
+        var scan = await repositories.ScanAsync(ct, refresh: true);
 
         return scan.Root is null
-            ? new ConnectionTest(false, "Nie ustawiono folderu.")
+            ? new ConnectionTest(false, "Nie ustawiono folderu — strona Repozytoria pokaże tylko katalog repo.", Configured: false)
             : new ConnectionTest(true, $"Znaleziono repozytoriów: {scan.Repositories.Count} (w katalogu repos.yaml: {scan.Repositories.Count(repository => repository.CatalogName is not null)}).");
     }
 }
