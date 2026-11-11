@@ -12,5 +12,5 @@ export const navigation: NavigationItem[] = [
   { label: 'Kanban', icon: 'mdi-view-column-outline', to: '/kanban' },
   { label: 'Repozytoria', icon: 'mdi-source-repository', to: '/repos' },
   { label: 'Flow', icon: 'mdi-sitemap-outline', to: '/flows', comingInPhase: 8 },
-  { label: 'Tokeny', icon: 'mdi-chart-line', to: '/tokens', comingInPhase: 5 },
+  { label: 'Tokeny', icon: 'mdi-chart-line', to: '/tokens' },
 ]

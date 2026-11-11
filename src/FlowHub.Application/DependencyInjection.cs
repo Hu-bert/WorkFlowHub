@@ -2,6 +2,7 @@ using FlowHub.Application.Agents;
 using FlowHub.Application.Engine;
 using FlowHub.Application.Engine.Scripts;
 using FlowHub.Application.Flows;
+using FlowHub.Application.Tokens;
 using FlowHub.Application.WorkItems;
 using FlowHub.Application.Workspace;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,7 @@ public static class DependencyInjection
         services.AddSingleton<FlowCatalog>();
         services.AddScoped<WorkItemService>();
         services.AddScoped<WorkItemFiles>();
+        services.AddScoped<TokenReportService>();
 
         return services.AddFlowEngine();
     }
@@ -39,6 +41,8 @@ public static class DependencyInjection
 
         services.AddSingleton<AgentPromptBuilder>();
         services.AddSingleton<PermissionBroker>();
+        services.AddSingleton<ModelRouter>();
+        services.AddSingleton<TokenBudget>();
 
         return services;
     }

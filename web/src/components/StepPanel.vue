@@ -4,13 +4,16 @@ import { computed, ref, watch } from 'vue'
 import type { StepRun } from '@/api/types'
 import { formatCost, formatDuration, formatTokens } from '@/shared/format'
 import { stepKindPresentation, stepStatusPresentation } from '@/shared/stepPresentation'
+import { useCatalog } from '@/stores/catalog'
 import { useWorkItemDetail } from '@/stores/workItemDetail'
 
+import BudgetBar from './BudgetBar.vue'
 import ConsoleOutput from './ConsoleOutput.vue'
 import StatusBadge from './StatusBadge.vue'
 
 const props = defineProps<{ step: StepRun }>()
 const detail = useWorkItemDetail()
+const catalog = useCatalog()
 
 const proposal = ref('')
 const model = ref('')
@@ -35,6 +38,9 @@ const isActive = computed(() => props.step.status === 'Approved' || props.step.s
 const isDone = computed(() => ['Succeeded', 'Failed', 'Skipped'].includes(props.step.status))
 const output = computed(() => detail.outputOf(props.step))
 const permission = computed(() => detail.permissionFor(props.step))
+
+/** Podpowiedzi modelu: poziomy z tabeli routingu (np. "tier:cheap"); można też wpisać konkretne id. */
+const modelOptions = computed(() => catalog.models?.tiers.map((tier) => `tier:${tier.tier}`) ?? [])
 
 const dirty = computed(
   () =>
@@ -97,7 +103,7 @@ const approveLabel = computed(() => (props.step.kind === 'Manual' ? 'Potwierdzam
       />
 
       <div v-if="isAgent" class="row">
-        <v-text-field v-model="model" label="Model (np. tier:cheap albo id modelu)" hide-details />
+        <v-combobox v-model="model" :items="modelOptions" label="Model (poziom albo id modelu)" hide-details />
         <v-text-field v-model.number="tokenBudget" label="Budżet tokenów (0 = bez limitu)" type="number" min="0" hide-details />
       </div>
 
@@ -116,6 +122,8 @@ const approveLabel = computed(() => (props.step.kind === 'Manual' ? 'Potwierdzam
     </template>
 
     <!-- W trakcie -->
+    <BudgetBar v-if="isAgent && !isProposed" :used="step.usage.totalTokens" :limit="step.tokenBudget" label="Budżet kroku" />
+
     <template v-if="isActive">
       <v-alert v-if="permission" type="warning" variant="tonal" prominent title="Agent prosi o zgodę" class="permission">
         <div>

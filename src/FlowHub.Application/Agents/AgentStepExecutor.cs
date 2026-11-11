@@ -4,7 +4,12 @@ using FlowHub.Domain.Flows;
 namespace FlowHub.Application.Agents;
 
 /// <summary>Krok Agent: jedna sesja Copilot. Strumień zdarzeń trafia do konsoli, tokeny do kroku.</summary>
-public sealed class AgentStepExecutor(IAgentRunner runner, AgentPromptBuilder prompts, PermissionBroker permissions) : IStepExecutor
+public sealed class AgentStepExecutor(
+    IAgentRunner runner,
+    AgentPromptBuilder prompts,
+    PermissionBroker permissions,
+    ModelRouter models,
+    TokenBudget budget) : IStepExecutor
 {
     private const int SummaryMaxLength = 2000;
 
@@ -15,15 +20,31 @@ public sealed class AgentStepExecutor(IAgentRunner runner, AgentPromptBuilder pr
 
     public async Task<StepOutcome> ExecuteAsync(StepContext context, IStepLog log, CancellationToken ct)
     {
-        var request = Request(context);
-        StepOutcome? outcome = null;
-
-        await foreach (var agentEvent in runner.RunAsync(request, ct))
+        if (budget.TaskState(context.Item) == BudgetState.Exceeded)
         {
-            outcome = await HandleAsync(agentEvent, context, log, ct) ?? outcome;
+            return StepOutcome.Failure(
+                $"Budżet tokenów zadania jest wyczerpany ({context.Item.Usage.TotalTokens:N0} / {budget.TaskLimit:N0}). "
+                + "Zwiększ Models:TaskTokenBudget albo pomiń krok.");
         }
 
-        outcome ??= StepOutcome.Failure("Agent zakończył pracę bez wyniku.");
+        var request = Request(context);
+        var session = new AgentSession(context, log, models);
+        await log.WriteAsync($"Model: {request.Model}{Environment.NewLine}", ct);
+
+        // Przerwanie pętli (przekroczony budżet) kończy sesję agenta — runner sprząta po sobie.
+        await foreach (var agentEvent in runner.RunAsync(request, ct))
+        {
+            await session.HandleAsync(agentEvent, ct);
+
+            if (session.OverBudget)
+            {
+                return StepOutcome.Failure(
+                    $"Przekroczono budżet tokenów kroku ({context.Step.Usage.TotalTokens:N0} / {context.Step.TokenBudget:N0}). "
+                    + "Zwiększ budżet w propozycji i powtórz krok.");
+            }
+        }
+
+        var outcome = session.Outcome ?? StepOutcome.Failure("Agent zakończył pracę bez wyniku.");
         return outcome.Succeeded ? VerifyOutputs(request, outcome) : outcome;
     }
 
@@ -39,7 +60,7 @@ public sealed class AgentStepExecutor(IAgentRunner runner, AgentPromptBuilder pr
         {
             Prompt = PromptWithRemark(context),
             Agent = context.Definition.Agent,
-            Model = step.Model,
+            Model = models.Resolve(step.Model),
             WorkingDirectory = repo?.LocalPath ?? item.WorkDirectory,
             AdditionalDirectories = [item.WorkDirectory],
             AllowedTools = context.Definition.AllowedTools,
@@ -58,37 +79,6 @@ public sealed class AgentStepExecutor(IAgentRunner runner, AgentPromptBuilder pr
             : prompt;
     }
 
-    private static async Task<StepOutcome?> HandleAsync(AgentEvent agentEvent, StepContext context, IStepLog log, CancellationToken ct)
-    {
-        switch (agentEvent)
-        {
-            case AgentEvent.MessageDelta delta:
-                await log.WriteAsync(delta.Text, ct);
-                return null;
-
-            case AgentEvent.ToolStarted tool:
-                await log.WriteAsync($"{Environment.NewLine}🔧 {tool.Tool}{(tool.Detail is null ? "" : $": {tool.Detail}")}{Environment.NewLine}", ct);
-                return null;
-
-            case AgentEvent.ToolFinished tool:
-                await log.WriteAsync($"   {(tool.Succeeded ? "✓" : "✗")} {tool.Tool}{Environment.NewLine}", ct);
-                return null;
-
-            case AgentEvent.Usage usage:
-                context.Step.AddUsage(usage.Tokens);
-                return null;
-
-            case AgentEvent.Completed completed:
-                return StepOutcome.Success(Shorten(completed.Summary));
-
-            case AgentEvent.Failed failed:
-                return StepOutcome.Failure(failed.Error);
-
-            default:
-                return null;
-        }
-    }
-
     private static StepOutcome VerifyOutputs(AgentRequest request, StepOutcome outcome)
     {
         var missing = request.ExpectedOutputs.Where(file => !File.Exists(file)).Select(Path.GetFileName).ToList();
@@ -98,6 +88,60 @@ public sealed class AgentStepExecutor(IAgentRunner runner, AgentPromptBuilder pr
             : StepOutcome.Failure($"Agent nie utworzył oczekiwanych plików: {string.Join(", ", missing)}.");
     }
 
-    private static string Shorten(string summary) =>
-        summary.Length <= SummaryMaxLength ? summary : summary[..SummaryMaxLength] + "…";
+    /// <summary>Stan jednej sesji: przekłada zdarzenia agenta na log, tokeny i wynik kroku.</summary>
+    private sealed class AgentSession(StepContext context, IStepLog log, ModelRouter models)
+    {
+        private bool _warned;
+
+        public StepOutcome? Outcome { get; private set; }
+
+        public bool OverBudget => TokenBudget.StepState(context.Step) == BudgetState.Exceeded;
+
+        public async Task HandleAsync(AgentEvent agentEvent, CancellationToken ct)
+        {
+            switch (agentEvent)
+            {
+                case AgentEvent.MessageDelta delta:
+                    await log.WriteAsync(delta.Text, ct);
+                    break;
+
+                case AgentEvent.ToolStarted tool:
+                    await log.WriteAsync($"{Environment.NewLine}🔧 {tool.Tool}{(tool.Detail is null ? "" : $": {tool.Detail}")}{Environment.NewLine}", ct);
+                    break;
+
+                case AgentEvent.ToolFinished tool:
+                    await log.WriteAsync($"   {(tool.Succeeded ? "✓" : "✗")} {tool.Tool}{Environment.NewLine}", ct);
+                    break;
+
+                case AgentEvent.Usage usage:
+                    context.Step.AddUsage(models.Price(usage.Tokens));
+                    await WarnOnceAsync(ct);
+                    break;
+
+                case AgentEvent.Completed completed:
+                    Outcome = StepOutcome.Success(Shorten(completed.Summary));
+                    break;
+
+                case AgentEvent.Failed failed:
+                    Outcome = StepOutcome.Failure(failed.Error);
+                    break;
+            }
+        }
+
+        private async Task WarnOnceAsync(CancellationToken ct)
+        {
+            if (_warned || TokenBudget.StepState(context.Step) != BudgetState.Warning)
+            {
+                return;
+            }
+
+            _warned = true;
+            await log.WriteAsync(
+                $"{Environment.NewLine}⚠ Zużyto ponad 80% budżetu kroku ({context.Step.Usage.TotalTokens:N0} / {context.Step.TokenBudget:N0} tokenów).{Environment.NewLine}",
+                ct);
+        }
+
+        private static string Shorten(string summary) =>
+            summary.Length <= SummaryMaxLength ? summary : summary[..SummaryMaxLength] + "…";
+    }
 }

@@ -33,6 +33,8 @@ public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogge
             yield break;
         }
 
+        // Sprzątanie także wtedy, gdy silnik przerwie sesję wcześniej (np. przekroczony budżet tokenów).
+        using var cleanup = new ProcessCleanup(process);
         using var kill = ct.Register(() => Kill(process));
         var errors = process.StandardError.ReadToEndAsync(CancellationToken.None);
         var parser = new CopilotJsonlParser();
@@ -130,11 +132,19 @@ public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogge
         }
     }
 
+    private sealed class ProcessCleanup(Process process) : IDisposable
+    {
+        public void Dispose() => Kill(process);
+    }
+
     private static void Kill(Process process)
     {
         try
         {
-            process.Kill(entireProcessTree: true);
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
         }
         catch (InvalidOperationException)
         {

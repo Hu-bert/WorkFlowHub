@@ -6,6 +6,7 @@ export const router = createRouter({
     { path: '/', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
     { path: '/kanban', name: 'kanban', component: () => import('@/views/KanbanView.vue') },
     { path: '/repos', name: 'repos', component: () => import('@/views/ReposView.vue') },
+    { path: '/tokens', name: 'tokens', component: () => import('@/views/TokensView.vue') },
     {
       path: '/work-items/:id',
       name: 'work-item',

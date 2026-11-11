@@ -5,6 +5,7 @@ using FlowHub.Application.Engine;
 using FlowHub.Application.Tests.Engine;
 using FlowHub.Domain.Flows;
 using FlowHub.Domain.WorkItems;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 
 namespace FlowHub.Application.Tests.Agents;
@@ -23,10 +24,21 @@ public sealed class AgentStepExecutorTests : IDisposable
     {
         _blocks.FullPath(Arg.Any<string>()).Returns(call => Path.Combine("blocks", call.Arg<string>()));
         _stepLog.WriteAsync(Arg.Do<string>(_log.Add), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
-        _executor = new AgentStepExecutor(_runner, new AgentPromptBuilder(_blocks), new PermissionBroker(_live));
+        _executor = Executor(new PermissionBroker(_live));
     }
 
     public void Dispose() => Directory.Delete(_workRoot, recursive: true);
+
+    private static readonly IOptions<ModelOptions> Models = Options.Create(new ModelOptions
+    {
+        DefaultTier = "cheap",
+        TaskTokenBudget = 100_000,
+        Tiers = { ["cheap"] = "model-tani", ["standard"] = "model-sredni" },
+        Prices = { ["model-tani"] = new ModelPrice { InputPerMillion = 1m, OutputPerMillion = 10m } },
+    });
+
+    private AgentStepExecutor Executor(PermissionBroker broker) =>
+        new(_runner, new AgentPromptBuilder(_blocks), broker, new ModelRouter(Models), new TokenBudget(Models));
 
     private StepContext Context(StepDefinition? definition = null)
     {
@@ -60,7 +72,8 @@ public sealed class AgentStepExecutorTests : IDisposable
         Assert.True(outcome.Succeeded);
         Assert.Equal("Plan gotowy.", outcome.Message);
         Assert.Equal(1800, context.Step.Usage.TotalTokens);
-        Assert.StartsWith("Czytam zadanie.", string.Concat(_log));
+        Assert.StartsWith("Model: model-tani", string.Concat(_log));
+        Assert.Contains("Czytam zadanie.", string.Concat(_log));
         Assert.Contains("🔧 read: task.md", string.Concat(_log));
         Assert.Contains("✓ read", string.Concat(_log));
     }
@@ -121,7 +134,7 @@ public sealed class AgentStepExecutorTests : IDisposable
     {
         var context = Context();
         var broker = new PermissionBroker(_live);
-        var executor = new AgentStepExecutor(_runner, new AgentPromptBuilder(_blocks), broker);
+        var executor = Executor(broker);
         _runner.AskFor = ("write", "Zapis w repo");
         _runner.Events = [new AgentEvent.Completed("ok")];
 
@@ -139,6 +152,57 @@ public sealed class AgentStepExecutorTests : IDisposable
         Assert.True(_runner.PermissionGranted);
         Assert.Empty(broker.PendingFor(context.Item.Id));
         Assert.False(broker.Decide(request.Id, allow: true));
+    }
+
+    [Fact]
+    public async Task Tier_is_resolved_to_a_model_and_usage_is_priced()
+    {
+        var context = Context(new StepDefinition { Id = "plan", Name = "Plan", Kind = StepKind.Agent, Agent = "a", Model = "tier:standard" });
+        _runner.Events =
+        [
+            new AgentEvent.Usage(new TokenUsage { Model = "model-tani", InputTokens = 1_000_000, OutputTokens = 100_000 }),
+            new AgentEvent.Completed("ok"),
+        ];
+
+        await _executor.ExecuteAsync(context, _stepLog, CancellationToken.None);
+
+        Assert.Equal("model-sredni", _runner.LastRequest!.Model);
+        Assert.Equal(2.0m, context.Step.Usage.Cost);
+    }
+
+    [Fact]
+    public async Task Step_warns_at_80_percent_and_stops_at_100_percent_of_its_budget()
+    {
+        var context = Context(new StepDefinition { Id = "plan", Name = "Plan", Kind = StepKind.Agent, Agent = "a", TokenBudget = 1000 });
+        _runner.Events =
+        [
+            new AgentEvent.Usage(new TokenUsage { InputTokens = 850 }),
+            new AgentEvent.MessageDelta("pracuję dalej"),
+            new AgentEvent.Usage(new TokenUsage { InputTokens = 200 }),
+            new AgentEvent.MessageDelta("tego już nie powinno być"),
+            new AgentEvent.Completed("ok"),
+        ];
+
+        var outcome = await _executor.ExecuteAsync(context, _stepLog, CancellationToken.None);
+
+        Assert.False(outcome.Succeeded);
+        Assert.Contains("Przekroczono budżet tokenów kroku", outcome.Message);
+        Assert.Contains("80% budżetu", string.Concat(_log));
+        Assert.Contains("pracuję dalej", string.Concat(_log));
+        Assert.DoesNotContain("tego już nie powinno być", string.Concat(_log));
+    }
+
+    [Fact]
+    public async Task Agent_does_not_start_when_the_task_budget_is_used_up()
+    {
+        var context = Context();
+        context.Step.AddUsage(new TokenUsage { InputTokens = 100_000 });
+
+        var outcome = await _executor.ExecuteAsync(context, _stepLog, CancellationToken.None);
+
+        Assert.False(outcome.Succeeded);
+        Assert.Contains("Budżet tokenów zadania jest wyczerpany", outcome.Message);
+        Assert.Null(_runner.LastRequest);
     }
 
     private static async Task<T> WaitForAsync<T>(Func<T?> probe) where T : class
