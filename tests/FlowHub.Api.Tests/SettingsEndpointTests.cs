@@ -15,11 +15,11 @@ public sealed class SettingsEndpointTests(FlowHubApiFactory factory) : IClassFix
     private sealed record Models(bool Unlimited, long TaskTokenBudget);
 
     [Fact]
-    public async Task Modules_for_copilot_models_and_company_systems_are_listed()
+    public async Task Modules_for_copilot_models_local_repos_and_company_systems_are_listed()
     {
         var modules = await factory.CreateClient().GetAsync<List<SettingsModuleView>>("/api/settings");
 
-        Assert.Equal(["models", "copilot", "tfs", "jira", "teamcity", "octopus"], modules.Select(module => module.Id));
+        Assert.Equal(["models", "repositories", "copilot", "tfs", "jira", "teamcity", "octopus"], modules.Select(module => module.Id));
         Assert.All(modules, module => Assert.NotEmpty(module.Fields));
     }
 

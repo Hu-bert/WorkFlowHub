@@ -143,3 +143,18 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 
 **Sprawdzone:** pętla „co dalej” w aplikacji (na atrapie agenta), edycja `plan.md` w UI, generator skilla prawdziwym Copilotem (17 s), `--resume` w trybie `-p`.
 **Nie sprawdzone:** pętla „co dalej” z prawdziwym agentem realizacji zmieniającym kod. Tokeny zużyte przez generator nie trafiają do raportu (nie należą do żadnego zadania).
+
+## Faza 12 — lokalne repozytoria i wybór repo z TFS (2026-11-11)
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Folder z repozytoriami w Ustawieniach** (`Repositories:ScanRoot`, np. `C:\tfs`); strona Repozytoria pokazuje znalezione kopie | Prośba: repo leżą w folderach per branch albo luzem. Szukamy do 2 poziomów w głąb (folder → repo albo folder → folder brancha → repo). |
+| **Dla każdej kopii: branch, ostatnie commity, niezacommitowane pliki, a dla repo z katalogu — PR, build, release i środowiska tego brancha** | „Widoczność PR, commitów, TC, OC” w jednym miejscu. Dopasowanie do `repos.yaml` po adresie origin, potem po nazwie. |
+| **Tylko odczyt Gita** (`config`, `rev-parse`, `log`, `status`) | FlowHub niczego nie zmienia w Twoich kopiach. |
+| **„Dodaj do katalogu” przy lokalnym repo i „Dodaj repo z TFS” w nowym zadaniu** dopisują wpis na końcu `repos.yaml` | Komentarze i ręczne formatowanie pliku zostają. Adres bierzemy z origin / z serwera, nie z przeglądarki. `ciBuildConfigurations`, `deployProject` i `keywords` uzupełniasz potem ręcznie. |
+| **Lista repo z TFS ma atrapę** (repo demo + trzy spoza katalogu) i prawdziwą implementację (Ustawienia → TFS → „Lista repozytoriów do wyboru”) | Żeby wybór dało się obejrzeć bez serwera. |
+| **Wspólny `BranchStatusService`** dla tabeli repo w zadaniu i lokalnych kopii | Jedno miejsce odpytywania TFS / TeamCity / Octopus. |
+| **Skrypt `tools/collect-api-samples.ps1` + [docs/polaczenia-w-pracy.md](polaczenia-w-pracy.md)** | Pytanie „czy wystarczy wersja?” — nie; potrzebne są próbki odpowiedzi. Skrypt je zbiera (same GET). |
+
+**Sprawdzone:** skan na katalogu `work/` (8 kopii w folderach zadań), statusy z atrap, dodanie repo z listy TFS-atrapy w oknie nowego zadania.
+**Nie sprawdzone:** skan prawdziwego `C:\tfs` (duże repo, worktree), lista repo z prawdziwego TFS, skrypt zbierający próbki na prawdziwych serwerach (sprawdzona tylko składnia).

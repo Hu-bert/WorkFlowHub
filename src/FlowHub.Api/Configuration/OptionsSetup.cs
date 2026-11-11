@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using FlowHub.Application.Agents;
 using FlowHub.Application.Board;
 using FlowHub.Application.Integrations;
+using FlowHub.Application.Repositories;
 using FlowHub.Application.Workspace;
 using FlowHub.Infrastructure.Settings;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -27,6 +28,7 @@ public static class OptionsSetup
         builder.Services.Configure<RepoStatusOptions>(builder.Configuration.GetSection(RepoStatusOptions.SectionName));
         builder.Services.Configure<ModelOptions>(builder.Configuration.GetSection(ModelOptions.SectionName));
         builder.Services.Configure<WorkspaceOptions>(builder.Configuration.GetSection(WorkspaceOptions.SectionName));
+        builder.Services.Configure<LocalRepositoriesOptions>(builder.Configuration.GetSection(LocalRepositoriesOptions.SectionName));
 
         // Ścieżki względne w konfiguracji liczymy od katalogu aplikacji, nie od bieżącego katalogu procesu.
         builder.Services.PostConfigure<WorkspaceOptions>(options =>

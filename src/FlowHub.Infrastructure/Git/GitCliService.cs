@@ -30,6 +30,46 @@ public sealed class GitCliService : IGitService
             patch.Length > MaxPatchLength);
     }
 
+    public async Task<GitWorkingCopy> DescribeAsync(string repositoryPath, CancellationToken ct)
+    {
+        // Puste repo (bez commitów) albo brak origin to nie błąd — po prostu nie ma czego pokazać.
+        var remote = await TryRunAsync(repositoryPath, ct, "config", "--get", "remote.origin.url");
+        var branch = await TryRunAsync(repositoryPath, ct, "rev-parse", "--abbrev-ref", "HEAD");
+        var log = await TryRunAsync(repositoryPath, ct, "log", "-5", $"--pretty=format:%h{FieldSeparator}%an{FieldSeparator}%aI{FieldSeparator}%s");
+        var status = await TryRunAsync(repositoryPath, ct, "status", "--porcelain");
+
+        return new GitWorkingCopy(
+            string.IsNullOrWhiteSpace(remote) ? null : remote.Trim(),
+            string.IsNullOrWhiteSpace(branch) ? "(brak commitów)" : branch.Trim(),
+            Lines(log).Select(ParseCommit).OfType<GitCommit>().ToList(),
+            Lines(status).Length);
+    }
+
+    private const char FieldSeparator = '\u001f';
+
+    private static GitCommit? ParseCommit(string line)
+    {
+        var fields = line.Split(FieldSeparator);
+        return fields.Length == 4 && DateTimeOffset.TryParse(fields[2], out var date)
+            ? new GitCommit(fields[0], fields[1], date, fields[3])
+            : null;
+    }
+
+    private static string[] Lines(string? text) =>
+        (text ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static async Task<string?> TryRunAsync(string repositoryPath, CancellationToken ct, params string[] arguments)
+    {
+        try
+        {
+            return await RunAsync(repositoryPath, ct, arguments);
+        }
+        catch (DomainException)
+        {
+            return null;
+        }
+    }
+
     private static async Task<string> RunAsync(string repositoryPath, CancellationToken ct, params string[] arguments)
     {
         var info = new ProcessStartInfo("git")

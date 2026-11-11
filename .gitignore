@@ -33,3 +33,6 @@ src/FlowHub.Api/wwwroot/
 
 # Tymczasowa baza narz�dzia dotnet ef
 design-time.db
+
+# Próbki odpowiedzi API zebrane w pracy (mogą zawierać dane firmowe)
+api-samples/

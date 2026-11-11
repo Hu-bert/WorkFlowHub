@@ -38,6 +38,9 @@ Połączenia ustawiasz na stronie **Ustawienia** w aplikacji — zmiany działaj
 | TFS (pull requesty, lista repo) | Ustawienia → TFS | Adres kolekcji, projekt, token PAT. Klient nie był sprawdzony na prawdziwym serwerze. |
 | Jira | Ustawienia → Jira | Jak wyżej. Stara Jira bez API: zostaw atrapę i wklejaj treść ręcznie. |
 | TeamCity, Octopus | Ustawienia | Na razie tylko zapis adresu i test połączenia; dane z atrapy. |
+| Folder z repozytoriami | Ustawienia → Repozytoria lokalne | Np. `C:\tfs` — strona Repozytoria pokaże kopie z branchem, commitami i statusami. |
+
+Co sprawdzić i zebrać przed podłączeniem serwerów: [docs/polaczenia-w-pracy.md](docs/polaczenia-w-pracy.md).
 | Kolumny kanbana | `Board:Columns` | |
 | Środowisko „gotowe” | `RepoStatus:ReadyEnvironment` | Domyślnie DEV. |
 

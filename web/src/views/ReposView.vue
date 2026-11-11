@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
+import LocalRepositories from '@/components/LocalRepositories.vue'
 import { useCatalog } from '@/stores/catalog'
 import { useNotifications } from '@/stores/notifications'
 
@@ -28,14 +29,16 @@ async function reload() {
     <header class="fh-page-header">
       <div>
         <h1>Repozytoria</h1>
-        <p>Katalog repo z pliku <code>repos.yaml</code>. Po edycji pliku kliknij „Wczytaj ponownie”.</p>
+        <p>Twoje lokalne kopie oraz katalog repo z pliku <code>repos.yaml</code> (po ręcznej edycji pliku kliknij „Wczytaj ponownie”).</p>
       </div>
       <v-btn variant="tonal" color="primary" prepend-icon="mdi-refresh" :loading="reloading" @click="reload">
         Wczytaj ponownie
       </v-btn>
     </header>
 
-    <v-card>
+    <LocalRepositories />
+
+    <v-card title="Katalog repo (repos.yaml)" prepend-icon="mdi-source-repository">
       <v-table>
         <thead>
           <tr>
