@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using FlowHub.Application.Agents;
 using FlowHub.Application.Board;
+using FlowHub.Application.Integrations;
 using FlowHub.Application.Workspace;
 
 namespace FlowHub.Api.Configuration;
@@ -14,6 +15,7 @@ public static class OptionsSetup
 
         builder.Services.Configure<BoardOptions>(builder.Configuration.GetSection(BoardOptions.SectionName));
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection(AgentOptions.SectionName));
+        builder.Services.Configure<RepoStatusOptions>(builder.Configuration.GetSection(RepoStatusOptions.SectionName));
         builder.Services.Configure<ModelOptions>(builder.Configuration.GetSection(ModelOptions.SectionName));
         builder.Services.Configure<WorkspaceOptions>(builder.Configuration.GetSection(WorkspaceOptions.SectionName));
 

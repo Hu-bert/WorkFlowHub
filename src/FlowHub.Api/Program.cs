@@ -23,6 +23,7 @@ builder.Services
     .AddProblemDetails()
     .AddSingleton<ILiveNotifier, SignalRLiveNotifier>()
     .AddHostedService<StepWorker>()
+    .AddHostedService<RepoStatusRefresher>()
     .AddSignalR()
     .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
@@ -41,6 +42,7 @@ app.MapWorkItemEndpoints();
 app.MapStepEndpoints();
 app.MapAgentEndpoints();
 app.MapTokenEndpoints();
+app.MapIntegrationEndpoints();
 app.MapHub<LiveHub>(LiveHub.Route);
 app.MapFallbackToFile("index.html");
 

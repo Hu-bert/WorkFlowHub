@@ -120,6 +120,9 @@ internal sealed class RecordingNotifier : ILiveNotifier
         Permissions.Remove(request);
         return Task.CompletedTask;
     }
+
+    public Task RepoStatusChangedAsync(FlowHub.Application.Integrations.WorkItemRepoStatus status, CancellationToken ct) =>
+        Task.CompletedTask;
 }
 
 internal sealed class FakeExecutor(StepKind kind) : IStepExecutor

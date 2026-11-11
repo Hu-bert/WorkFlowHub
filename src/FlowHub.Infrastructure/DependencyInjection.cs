@@ -2,6 +2,8 @@ using FlowHub.Application.Agents;
 using FlowHub.Application.Blocks;
 using FlowHub.Application.Engine.Scripts;
 using FlowHub.Application.Flows;
+using FlowHub.Application.Git;
+using FlowHub.Infrastructure.Git;
 using FlowHub.Application.Repositories;
 using FlowHub.Application.WorkItems;
 using FlowHub.Infrastructure.Agents;
@@ -30,6 +32,7 @@ public static class DependencyInjection
         services.AddSingleton<IRepositoryCatalog, YamlRepositoryCatalog>();
         services.AddSingleton<IBlockLibrary, FileBlockLibrary>();
         services.AddSingleton<IScriptRunner, PowerShellScriptRunner>();
+        services.AddSingleton<IGitService, GitCliService>();
 
         return services.AddAgentRunner();
     }

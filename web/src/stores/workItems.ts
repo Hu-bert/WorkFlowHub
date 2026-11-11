@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
+import { fetchRepoLevels, type RepoLevel } from '@/api/integrations'
 import type { CreateWorkItemRequest, WorkItemSummary } from '@/api/types'
 import { createWorkItem, fetchWorkItems, moveWorkItem } from '@/api/workItems'
 
@@ -12,10 +13,15 @@ export const useWorkItems = defineStore('workItems', () => {
   const waitingForUser = computed(() => items.value.filter((item) => item.waitsForUser))
   const inColumn = (column: string) => items.value.filter((item) => item.boardColumn === column)
 
+  /** Kropki statusu per repo (PR / build / wdrożenia) dla kart zadań. */
+  const repoLevels = ref<Record<string, RepoLevel[]>>({})
+
   async function load() {
     loading.value = true
     try {
       items.value = await fetchWorkItems()
+      // Kropki są dodatkiem — gdy integracje nie odpowiadają, lista zadań i tak ma się pokazać.
+      repoLevels.value = await fetchRepoLevels().catch(() => ({}))
     } finally {
       loading.value = false
     }
@@ -48,5 +54,5 @@ export const useWorkItems = defineStore('workItems', () => {
     }
   }
 
-  return { items, loading, waitingForUser, inColumn, load, create, replace, move }
+  return { items, loading, repoLevels, waitingForUser, inColumn, load, create, replace, move }
 })

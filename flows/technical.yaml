@@ -88,6 +88,12 @@ flow:
     inputs: [plan.md, "summary-*.md"]
     outputs: [architecture-notes.md]
 
+  - id: pull-request
+    name: Sprawdzenie pull requesta
+    kind: Check
+    check: pull-request
+    perRepo: true
+
   - id: teams
     name: Wiadomość na Teams z PR
     kind: Agent
@@ -96,7 +102,7 @@ flow:
     model: tier:cheap
     tokenBudget: 10000
     allowedTools: [read]
-    inputs: [architecture-notes.md, templates/teams.md]
+    inputs: [architecture-notes.md, "pr-*.md", templates/teams.md]
     outputs: [teams.md]
 
   - id: retro
