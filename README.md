@@ -26,31 +26,30 @@ Bez żadnej konfiguracji aplikacja działa na **atrapach (Fake)**: agent udaje s
 4. **Tabela repo** pokazuje dla każdego repo: testy, PR, build, release i środowiska. Najgorszy status wygrywa.
 5. **Retro** na końcu podsumowuje zadanie i proponuje zmiany w bloczkach — wdrażasz je w zakładce „Flow i bloczki”.
 
-## Co przełączyć w pracy
+## Połączenia
 
-Połączenia ustawiasz na stronie **Ustawienia** w aplikacji — zmiany działają od razu, bez restartu. Ustawienia trafiają do `%LOCALAPPDATA%\FlowHub\settings.json`, a tokeny (zaszyfrowane) do `secrets.json` obok — nigdy do repo. Reszta jest w [src/FlowHub.Api/appsettings.json](src/FlowHub.Api/appsettings.json).
+Wszystko ustawiasz na stronie **Ustawienia** — zmiany działają od razu, bez restartu. Ustawienia trafiają do `%LOCALAPPDATA%\FlowHub\settings.json`, a tokeny (zaszyfrowane) do `secrets.json` obok — nigdy do repo.
 
 | Co | Gdzie | Uwagi |
 |---|---|---|
-| Repozytoria | [repos.yaml](repos.yaml) | Podmień wpisy `demo://` na prawdziwe adresy TFS, build configuration i projekty Octopus. |
 | Agent Copilot | Ustawienia → GitHub Copilot CLI | Najpierw `copilot login` w zwykłym terminalu. Sprawdzone na Copilot CLI 1.0.109. |
 | Plan i modele | Ustawienia → Modele i plan Copilot | „Bez limitu” (Enterprise) wyłącza budżety i wycenę. Poziomy domyślnie `auto`. |
-| TFS (pull requesty, lista repo) | Ustawienia → TFS | Adres kolekcji, projekt, token PAT. Klient nie był sprawdzony na prawdziwym serwerze. |
-| Jira | Ustawienia → Jira | Jak wyżej. Stara Jira bez API: zostaw atrapę i wklejaj treść ręcznie. |
-| TeamCity, Octopus | Ustawienia | Na razie tylko zapis adresu i test połączenia; dane z atrapy. |
-| Folder z repozytoriami | Ustawienia → Repozytoria lokalne | Np. `C:\tfs` — strona Repozytoria pokaże kopie z branchem, commitami i statusami. |
+| TFS | Ustawienia → TFS | Pull requesty, lista repo i statusy buildów. Adres kolekcji + token PAT. |
+| Buildy | Ustawienia → TeamCity / buildy | Źródło: statusy z TFS (bez mapowania) albo TeamCity REST. |
+| Wdrożenia i środowiska | Ustawienia → Octopus Deploy | Także lista pokazywanych środowisk i środowisko domyślne. |
+| Jira | Ustawienia → Jira | Stara Jira bez API: zostaw atrapę i wklejaj treść ręcznie. |
+| Folder z repozytoriami | Ustawienia → Repozytoria lokalne | Np. `C:\tfs` — strona Repozytoria pokaże kopie jako drzewo, ze statusami. |
+| Katalog repo | Repozytoria → Katalog repo | Skąd klonować repo i jak nazywa się w TeamCity / Octopus (zapis do `repos.yaml`). |
+| Kolumny kanbana | `Board:Columns` w [appsettings.json](src/FlowHub.Api/appsettings.json) | |
 
-Co sprawdzić i zebrać przed podłączeniem serwerów: [docs/polaczenia-w-pracy.md](docs/polaczenia-w-pracy.md).
-| Kolumny kanbana | `Board:Columns` | |
-| Środowisko „gotowe” | `RepoStatus:ReadyEnvironment` | Domyślnie DEV. |
-
+Klienty TFS, TeamCity, Octopus i Jira są napisane wg dokumentacji i **nie były sprawdzone na prawdziwych serwerach** — kroki podłączenia i diagnostyka: [docs/polaczenia-w-pracy.md](docs/polaczenia-w-pracy.md).
 ## Struktura
 
 ```
 src/FlowHub.Domain          encje i reguły (zero zależności)
 src/FlowHub.Application     use case'y, silnik flow, porty
 src/FlowHub.Infrastructure  EF Core + SQLite, YAML, PowerShell, Git, agent (Fake / Copilot CLI)
-src/FlowHub.Integrations    PR, CI, wdrożenia, tracker (Fake)
+src/FlowHub.Integrations    TFS, TeamCity, Octopus, Jira (+ atrapy)
 src/FlowHub.Api             Web API + SignalR + hosting frontendu
 web/                        Vue 3 + TypeScript + Vuetify
 flows/                      typy zadań i ich kroki (YAML)
@@ -65,7 +64,7 @@ tests/                      xUnit; frontend: Vitest w web/
 | typ zadania | nowy plik w `flows/` albo „Nowy typ zadania” w UI |
 | agenta / skill / prompt / skrypt | plik w `blocks/` albo zakładka „Bloczki” |
 | rodzaj kroku | klasa `IStepExecutor` + jedna linia w `Application/DependencyInjection.cs` |
-| integrację | implementacja portu z `Application/Integrations/Ports.cs` + wpis w `Integrations/DependencyInjection.cs` |
+| integrację | implementacja portu z `Application/Integrations/Ports.cs` + wpis w `Integrations/DependencyInjection.cs` + karta ustawień (`ISettingsModule`) |
 | inny sposób uruchamiania agenta (np. SDK) | klasa `IAgentRunner` + wpis w `Infrastructure/DependencyInjection.cs` |
 | stronę w UI | widok w `web/src/views` + trasa w `router/index.ts` + pozycja w `layout/navigation.ts` |
 

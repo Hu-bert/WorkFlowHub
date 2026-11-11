@@ -335,7 +335,7 @@ Fazy 9–12 — szczegóły i lista rzeczy niesprawdzonych w [docs/DECYZJE.md](d
 - **Krok ręczny „co dalej?” po realizacji** (`followUp` w flow) — pętla polecenie → agent → przegląd.
 - **Generator bloczków** (skill / agent / prompt / skrypt na wzór istniejącego) — zawsze szkic do akceptacji.
 - **Repozytoria:** skan lokalnego folderu (np. `C:\tfs`) ze statusami PR / build / wdrożenia oraz wybór repo z TFS przy nowym zadaniu.
-- **Do zrobienia w pracy:** prawdziwe klienty TeamCity i Octopus — po zebraniu próbek wg [docs/polaczenia-w-pracy.md](docs/polaczenia-w-pracy.md).
+- Podłączanie serwerów w pracy: [docs/polaczenia-w-pracy.md](docs/polaczenia-w-pracy.md).
 
 ### Po pierwszym użyciu w pracy (2026-11-12) — faza 13
 

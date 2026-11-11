@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FlowHub.Application.Integrations;
+using FlowHub.Integrations.Http;
 
 namespace FlowHub.Integrations.Tfs;
 
@@ -12,13 +13,12 @@ public sealed class TfsRepositoryDirectory(TfsApi api) : IRepositoryDirectory
         return repositories is null ? [] : Map(repositories.RootElement);
     }
 
-    public static IReadOnlyList<RemoteRepository> Map(JsonElement repositories) => TfsMapper.Items(repositories)
+    public static IReadOnlyList<RemoteRepository> Map(JsonElement repositories) => Json.Items(repositories, "value")
         .Where(repository => !(repository.TryGetProperty("isDisabled", out var disabled) && disabled.ValueKind == JsonValueKind.True))
         .Select(repository => new RemoteRepository(
-            TfsMapper.Text(repository, "name") ?? "",
-            TfsMapper.Text(repository, "remoteUrl") ?? "",
-            (TfsMapper.Text(repository, "defaultBranch") ?? "refs/heads/main").Replace("refs/heads/", ""),
-            TfsMapper.Text(repository, "webUrl")))
+            Json.Text(repository, "name") ?? "",
+            Json.Text(repository, "remoteUrl") ?? "",
+            (Json.Text(repository, "defaultBranch") ?? "refs/heads/main").Replace("refs/heads/", "")))
         .Where(repository => repository.Name.Length > 0 && repository.Url.Length > 0)
         .OrderBy(repository => repository.Name, StringComparer.OrdinalIgnoreCase)
         .ToList();

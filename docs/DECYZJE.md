@@ -2,6 +2,8 @@
 
 Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą można cofnąć.
 
+> **Jak czytać:** sekcje są w kolejności powstawania i opisują stan z danej fazy. Późniejsze fazy zmieniły część wcześniejszych ustaleń — m.in. Copilot CLI został sprawdzony na prawdziwym CLI (faza 9), przykładowe modele i ceny zastąpiło `auto` (faza 9), a „tylko atrapy” zastąpiły klienty TFS, Jira, TeamCity i Octopus (fazy 9 i 13). Aktualną listę rzeczy niesprawdzonych ma ostatnia sekcja.
+
 ## Faza 1
 
 | Decyzja | Dlaczego |
@@ -154,7 +156,7 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 | **„Dodaj do katalogu” przy lokalnym repo i „Dodaj repo z TFS” w nowym zadaniu** dopisują wpis na końcu `repos.yaml` | Komentarze i ręczne formatowanie pliku zostają. Adres bierzemy z origin / z serwera, nie z przeglądarki. `ciBuildConfigurations`, `deployProject` i `keywords` uzupełniasz potem ręcznie. |
 | **Lista repo z TFS ma atrapę** (repo demo + trzy spoza katalogu) i prawdziwą implementację (Ustawienia → TFS → „Lista repozytoriów do wyboru”) | Żeby wybór dało się obejrzeć bez serwera. |
 | **Wspólny `BranchStatusService`** dla tabeli repo w zadaniu i lokalnych kopii | Jedno miejsce odpytywania TFS / TeamCity / Octopus. |
-| **Skrypt `tools/collect-api-samples.ps1` + [docs/polaczenia-w-pracy.md](polaczenia-w-pracy.md)** | Pytanie „czy wystarczy wersja?” — nie; potrzebne są próbki odpowiedzi. Skrypt je zbiera (same GET). |
+| **[docs/polaczenia-w-pracy.md](polaczenia-w-pracy.md)** — jak podłączyć serwery | Skrypt zbierający próbki API został usunięty w porządkach: zastąpiła go „Diagnostyka połączeń” w aplikacji (faza 13). |
 
 **Sprawdzone:** skan na katalogu `work/` (8 kopii w folderach zadań), statusy z atrap, dodanie repo z listy TFS-atrapy w oknie nowego zadania.
 **Nie sprawdzone:** skan prawdziwego `C:\tfs` (duże repo, worktree), lista repo z prawdziwego TFS, skrypt zbierający próbki na prawdziwych serwerach (sprawdzona tylko składnia).

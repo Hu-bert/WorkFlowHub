@@ -41,7 +41,7 @@ public sealed class TfsSettingsModule(TfsApi api) : ISettingsModule
 
         return repositories is null
             ? new ConnectionTest(false, "Nie znaleziono projektu — sprawdź adres kolekcji i nazwę projektu.")
-            : new ConnectionTest(true, $"Połączono. Repozytoriów w projekcie: {TfsMapper.Items(repositories.RootElement).Count()}.");
+            : new ConnectionTest(true, $"Połączono. Repozytoriów w projekcie: {Json.Items(repositories.RootElement, "value").Count()}.");
     }
 }
 
@@ -68,7 +68,7 @@ public sealed class JiraSettingsModule(ApiClient client, JiraTaskSource jira, IO
 
         return me is null
             ? new ConnectionTest(false, "Serwer nie zna adresu /rest/api/2/myself — sprawdź adres Jiry.")
-            : new ConnectionTest(true, $"Połączono jako {TfsMapper.Text(me.RootElement, "displayName") ?? "?"}.");
+            : new ConnectionTest(true, $"Połączono jako {Json.Text(me.RootElement, "displayName") ?? "?"}.");
     }
 }
 

@@ -41,7 +41,6 @@ internal sealed class StepRunConfiguration : IEntityTypeConfiguration<StepRun>
         builder.ComplexProperty(step => step.Usage, usage => usage.Ignore(value => value.TotalTokens));
 
         builder.Ignore(step => step.IsFinished);
-        builder.Ignore(step => step.IsOverBudget);
-        builder.Ignore(step => step.Duration);
+
     }
 }

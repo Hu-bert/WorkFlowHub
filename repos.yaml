@@ -30,3 +30,9 @@ repositories:
     ciBuildConfigurations: [Customer_Portal_Build, Customer_Portal_E2E]
     deployProject: Customer.Portal
     keywords: [portal, klient, logowanie, formularz, frontend]
+
+  - name: "ParishManager2.0"
+    url: "https://github.com/Hu-bert/ParishManager2.0.git"
+    defaultBranch: "main"
+    ciBuildConfigurations: []
+    keywords: []

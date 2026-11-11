@@ -83,7 +83,7 @@ public static class RepositoryEndpoints
             var remote = (await directory.ListAsync(ct)).FirstOrDefault(repository => repository.Name == request.Name)
                 ?? throw new DomainException($"Na serwerze nie ma repo '{request.Name}'.");
 
-            return catalog.Add(new CodeRepository { Name = remote.Name, Url = remote.Url, DefaultBranch = remote.DefaultBranch });
+            return catalog.Find(remote.Name) ?? catalog.Save(new CodeRepository { Name = remote.Name, Url = remote.Url, DefaultBranch = remote.DefaultBranch }, null);
         });
 
         // Mapa repo: zapamiętany wynik analizy technologicznej, używany ponownie w kolejnych zadaniach.

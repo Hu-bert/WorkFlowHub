@@ -51,7 +51,6 @@ export interface RemoteRepository {
   name: string
   url: string
   defaultBranch: string
-  webUrl: string | null
 }
 
 /** Jedno zapytanie FlowHub do serwera firmowego (bez tokenów) i jego wynik. */

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FlowHub.Application.Integrations;
 using FlowHub.Domain.Repositories;
+using FlowHub.Integrations.Http;
 
 namespace FlowHub.Integrations.Tfs;
 
@@ -61,54 +62,54 @@ public sealed class TfsStatusCiServer(TfsApi api) : ICiServer
 public static class TfsStatusMapper
 {
     public static string? HeadCommit(JsonElement refs, string branch) =>
-        TfsMapper.Items(refs)
-            .Where(reference => string.Equals(TfsMapper.Text(reference, "name"), $"refs/heads/{branch}", StringComparison.OrdinalIgnoreCase))
-            .Select(reference => TfsMapper.Text(reference, "objectId"))
+        Json.Items(refs, "value")
+            .Where(reference => string.Equals(Json.Text(reference, "name"), $"refs/heads/{branch}", StringComparison.OrdinalIgnoreCase))
+            .Select(reference => Json.Text(reference, "objectId"))
             .FirstOrDefault();
 
     /// <summary>Jeden build na każdy kontekst (genre/name) — najnowszy status wygrywa. „notApplicable” pomijamy.</summary>
     public static IReadOnlyList<BuildStatus> Builds(JsonElement statuses, string branch) =>
-        TfsMapper.Items(statuses)
-            .Where(status => TfsMapper.Text(status, "state") is not (null or "notApplicable"))
+        Json.Items(statuses, "value")
+            .Where(status => Json.Text(status, "state") is not (null or "notApplicable"))
             .GroupBy(Context)
-            .Select(group => group.OrderByDescending(status => TfsMapper.Text(status, "creationDate")).First())
+            .Select(group => group.OrderByDescending(status => Json.Text(status, "creationDate")).First())
             .Select(status => new BuildStatus(
                 Context(status),
                 Number(status),
-                State(TfsMapper.Text(status, "state")!),
+                State(Json.Text(status, "state")!),
                 [],
-                TfsMapper.Text(status, "targetUrl") ?? "",
-                TfsMapper.Text(status, "description"),
+                Json.Text(status, "targetUrl") ?? "",
+                Json.Text(status, "description"),
                 branch))
             .ToList();
 
     public static IReadOnlyList<CiChange> Changes(JsonElement commits) =>
-        TfsMapper.Items(commits)
+        Json.Items(commits, "value")
             .Select(commit =>
             {
                 var author = commit.TryGetProperty("author", out var value) ? value : default;
-                var id = TfsMapper.Text(commit, "commitId") ?? "";
+                var id = Json.Text(commit, "commitId") ?? "";
 
                 return new CiChange(
                     id.Length > 8 ? id[..8] : id,
-                    TfsMapper.Text(author, "name") ?? "?",
-                    (TfsMapper.Text(commit, "comment") ?? "").Split('\n')[0],
-                    DateTime.TryParse(TfsMapper.Text(author, "date"), out var date) ? date.ToUniversalTime() : default);
+                    Json.Text(author, "name") ?? "?",
+                    (Json.Text(commit, "comment") ?? "").Split('\n')[0],
+                    DateTime.TryParse(Json.Text(author, "date"), out var date) ? date.ToUniversalTime() : default);
             })
             .ToList();
 
     private static string Context(JsonElement status)
     {
         var context = status.TryGetProperty("context", out var value) ? value : default;
-        var name = TfsMapper.Text(context, "name") ?? "status";
+        var name = Json.Text(context, "name") ?? "status";
 
-        return TfsMapper.Text(context, "genre") is { Length: > 0 } genre ? $"{genre}/{name}" : name;
+        return Json.Text(context, "genre") is { Length: > 0 } genre ? $"{genre}/{name}" : name;
     }
 
     /// <summary>Numer builda bierzemy z adresu (ostatni segment z cyframi), bo status go nie ma w osobnym polu.</summary>
     private static string Number(JsonElement status)
     {
-        var url = TfsMapper.Text(status, "targetUrl") ?? "";
+        var url = Json.Text(status, "targetUrl") ?? "";
         var segment = url.Split('/', '?', '=', '&', ':').LastOrDefault(part => part.Length > 0 && part.All(char.IsDigit));
 
         return segment ?? "?";

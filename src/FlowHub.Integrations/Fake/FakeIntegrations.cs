@@ -150,6 +150,6 @@ public sealed class FakeRepositoryDirectory : IRepositoryDirectory
 
     public Task<IReadOnlyList<RemoteRepository>> ListAsync(CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<RemoteRepository>>(Names
-            .Select(name => new RemoteRepository(name, $"demo://{name}", "main", $"{TfsUrl}/{name}"))
+            .Select(name => new RemoteRepository(name, $"demo://{name}", "main"))
             .ToList());
 }

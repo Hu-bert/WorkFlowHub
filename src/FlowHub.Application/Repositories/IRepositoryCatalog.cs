@@ -11,10 +11,7 @@ public interface IRepositoryCatalog
 
     void Reload();
 
-    /// <summary>Dopisuje repo do katalogu (repos.yaml). Gdy repo o tej nazwie już jest — zwraca istniejące.</summary>
-    CodeRepository Add(CodeRepository repository);
-
-    /// <summary>Zapisuje repo z formularza: nowe albo zmienione (originalName = nazwa przed zmianą).</summary>
+    /// <summary>Zapisuje repo w katalogu (repos.yaml): nowe (originalName = null) albo zmienione (originalName = nazwa przed zmianą).</summary>
     CodeRepository Save(CodeRepository repository, string? originalName);
 
     bool Remove(string name);
