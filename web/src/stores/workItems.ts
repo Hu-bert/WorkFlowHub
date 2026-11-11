@@ -27,6 +27,12 @@ export const useWorkItems = defineStore('workItems', () => {
     return created
   }
 
+  /** Podmienia zadanie na liście (zmiana przyszła na żywo z backendu). */
+  function replace(summary: WorkItemSummary) {
+    const index = items.value.findIndex((candidate) => candidate.id === summary.id)
+    if (index >= 0) items.value[index] = summary
+  }
+
   /** Przenosi kartę od razu w UI; gdy API odmówi — cofa. */
   async function move(id: string, column: string) {
     const item = items.value.find((candidate) => candidate.id === id)
@@ -42,5 +48,5 @@ export const useWorkItems = defineStore('workItems', () => {
     }
   }
 
-  return { items, loading, waitingForUser, inColumn, load, create, move }
+  return { items, loading, waitingForUser, inColumn, load, create, replace, move }
 })

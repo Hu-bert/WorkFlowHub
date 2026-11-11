@@ -1,47 +1,63 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
-import type { WorkItemDetails } from '@/api/types'
-import { fetchWorkItem } from '@/api/workItems'
-import StatusBadge from '@/components/StatusBadge.vue'
-import { stepKindPresentation, stepStatusPresentation } from '@/shared/stepPresentation'
+import type { StepRun } from '@/api/types'
+import StepList from '@/components/StepList.vue'
+import StepPanel from '@/components/StepPanel.vue'
 import { useCatalog } from '@/stores/catalog'
 import { useNotifications } from '@/stores/notifications'
+import { useWorkItemDetail } from '@/stores/workItemDetail'
 import { useWorkItems } from '@/stores/workItems'
 
 const props = defineProps<{ id: string }>()
 
 const catalog = useCatalog()
 const workItems = useWorkItems()
+const detail = useWorkItemDetail()
 const notifications = useNotifications()
-const item = ref<WorkItemDetails | null>(null)
 
-async function load() {
-  try {
-    await catalog.load()
-    item.value = await fetchWorkItem(props.id)
-  } catch (error) {
-    notifications.error(error)
-  }
-}
+/** Krok wybrany ręcznie; bez wyboru pokazujemy bieżący krok flow. */
+const pickedStepId = ref<string | null>(null)
+
+const item = computed(() => detail.item)
+const selectedStep = computed<StepRun | null>(() => {
+  const steps = item.value?.steps ?? []
+  return steps.find((step) => step.id === pickedStepId.value) ?? detail.currentStep ?? steps.at(-1) ?? null
+})
+
+watch(
+  () => props.id,
+  async (id) => {
+    pickedStepId.value = null
+    try {
+      await Promise.all([catalog.load(), detail.load(id)])
+    } catch (error) {
+      notifications.error(error)
+    }
+  },
+  { immediate: true },
+)
+
+// Gdy flow przejdzie do następnego kroku, widok idzie za nim.
+watch(
+  () => detail.currentStep?.id,
+  () => (pickedStepId.value = null),
+)
 
 async function moveTo(column: string) {
   if (!item.value) return
   try {
-    await workItems.load()
+    if (workItems.items.length === 0) await workItems.load()
     await workItems.move(item.value.summary.id, column)
     item.value.summary.boardColumn = column
   } catch (error) {
     notifications.error(error)
   }
 }
-
-onMounted(load)
-watch(() => props.id, load)
 </script>
 
 <template>
-  <section v-if="item" class="fh-page">
+  <section v-if="item" class="fh-page work-item">
     <header class="fh-page-header">
       <div>
         <div class="crumbs fh-muted">
@@ -49,67 +65,87 @@ watch(() => props.id, load)
         </div>
         <h1>{{ item.summary.title }}</h1>
         <p>
-          {{ catalog.flowName(item.summary.type) }} · {{ item.summary.stepsDone }}/{{ item.summary.stepsTotal }} kroków
+          {{ catalog.flowName(item.summary.type) }} · {{ item.summary.stepsDone }}/{{ item.summary.stepsTotal }} kroków ·
+          {{ item.repos.map((repo) => repo.name).join(', ') }}
         </p>
       </div>
-      <v-select
-        :model-value="item.summary.boardColumn"
-        :items="catalog.columns"
-        item-title="label"
-        item-value="key"
-        label="Etap pracy"
-        hide-details
-        class="column-select"
-        @update:model-value="moveTo"
-      />
+      <div class="header-actions">
+        <v-btn
+          v-if="detail.notStarted"
+          color="primary"
+          size="large"
+          prepend-icon="mdi-play"
+          :loading="detail.busy"
+          @click="detail.start()"
+        >
+          Uruchom flow
+        </v-btn>
+        <v-select
+          :model-value="item.summary.boardColumn"
+          :items="catalog.columns"
+          item-title="label"
+          item-value="key"
+          label="Etap pracy"
+          hide-details
+          class="column-select"
+          @update:model-value="moveTo"
+        />
+      </div>
     </header>
 
-    <v-card v-if="item.description" title="Treść zadania">
-      <v-card-text class="description">{{ item.description }}</v-card-text>
-    </v-card>
+    <v-progress-linear
+      :model-value="(item.summary.stepsDone / Math.max(1, item.summary.stepsTotal)) * 100"
+      color="primary"
+      height="6"
+      rounded
+    />
 
-    <v-card title="Repozytoria">
-      <v-table>
-        <thead>
-          <tr>
-            <th>Repo</th>
-            <th>Rola</th>
-            <th>Branch</th>
-            <th>Katalog</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="repo in item.repos" :key="repo.name">
-            <td class="font-weight-bold">{{ repo.name }}</td>
-            <td>{{ repo.role === 'Main' ? 'główne' : 'zależne' }}</td>
-            <td><code>{{ repo.branch }}</code></td>
-            <td class="fh-muted">{{ repo.localPath }}</td>
-          </tr>
-        </tbody>
-      </v-table>
-    </v-card>
+    <div class="layout">
+      <v-card class="steps">
+        <StepList :steps="item.steps" :selected-id="selectedStep?.id ?? null" @select="pickedStepId = $event.id" />
+      </v-card>
 
-    <v-card title="Kroki flow">
-      <v-list lines="one">
-        <v-list-item v-for="step in item.steps" :key="step.id">
-          <template #prepend>
-            <span class="order">{{ step.order }}</span>
-            <v-icon :icon="stepKindPresentation[step.kind].icon" :title="stepKindPresentation[step.kind].label" />
-          </template>
-          <v-list-item-title>
-            {{ step.name }}
-            <v-chip v-if="step.repoName" size="x-small" variant="tonal" class="ml-2">{{ step.repoName }}</v-chip>
-          </v-list-item-title>
-          <template #append>
-            <StatusBadge v-bind="stepStatusPresentation[step.status]" size="small" />
-          </template>
-        </v-list-item>
-      </v-list>
-    </v-card>
+      <div class="main">
+        <StepPanel v-if="selectedStep" :step="selectedStep" />
+
+        <v-expansion-panels variant="accordion">
+          <v-expansion-panel v-if="item.description" title="Treść zadania">
+            <v-expansion-panel-text class="description">{{ item.description }}</v-expansion-panel-text>
+          </v-expansion-panel>
+          <v-expansion-panel title="Repozytoria i katalog zadania">
+            <v-expansion-panel-text>
+              <p class="fh-muted">Katalog zadania: {{ item.workDirectory }}</p>
+              <v-table density="compact">
+                <thead>
+                  <tr>
+                    <th>Repo</th>
+                    <th>Rola</th>
+                    <th>Branch</th>
+                    <th>Katalog</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="repo in item.repos" :key="repo.name">
+                    <td class="font-weight-bold">{{ repo.name }}</td>
+                    <td>{{ repo.role === 'Main' ? 'główne' : 'zależne' }}</td>
+                    <td><code>{{ repo.branch }}</code></td>
+                    <td class="fh-muted">{{ repo.localPath }}</td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+      </div>
+    </div>
   </section>
 </template>
 
 <style scoped>
+.work-item {
+  max-width: none;
+}
+
 .crumbs {
   font-size: 0.85rem;
   margin-bottom: 0.25rem;
@@ -120,18 +156,43 @@ watch(() => props.id, load)
   text-decoration: none;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .column-select {
-  max-width: 260px;
   min-width: 220px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.steps {
+  padding: 0.5rem;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
 }
 
 .description {
   white-space: pre-wrap;
 }
 
-.order {
-  width: 1.75rem;
-  color: var(--fh-muted);
-  font-variant-numeric: tabular-nums;
+@media (max-width: 1000px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

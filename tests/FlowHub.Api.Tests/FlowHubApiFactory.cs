@@ -36,11 +36,26 @@ public sealed class FlowHubApiFactory : WebApplicationFactory<Program>
 
         try
         {
+            MakeWritable(_tempDirectory);
             Directory.Delete(_tempDirectory, recursive: true);
         }
-        catch (IOException)
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             // Plik bazy bywa jeszcze chwilę zablokowany — katalog tymczasowy posprząta system.
+        }
+    }
+
+    /// <summary>Git zapisuje obiekty jako „tylko do odczytu” — bez zdjęcia atrybutu nie da się ich usunąć.</summary>
+    private static void MakeWritable(string directory)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return;
+        }
+
+        foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+        {
+            File.SetAttributes(file, FileAttributes.Normal);
         }
     }
 }

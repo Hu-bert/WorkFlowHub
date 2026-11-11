@@ -25,4 +25,16 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 | **Migracje EF Core** (`dotnet ef`, narzędzie lokalne w `dotnet-tools.json`) | Baza przeżywa zmiany schematu między fazami. Nowa migracja: `dotnet ef migrations add <Nazwa> --project src/FlowHub.Infrastructure --startup-project src/FlowHub.Infrastructure --output-dir Persistence/Migrations`. |
 | **Repo demonstracyjne `demo://`** w `repos.yaml` | Bez dostępu do TFS skrypt klonowania tworzy lokalne repo-atrapę. W pracy podmieniasz adresy. |
 
+## Faza 3 — silnik flow
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Flow rusza po kliknięciu „Uruchom flow”**, nie przy tworzeniu zadania | Nic nie dzieje się na dysku bez Twojej decyzji. |
+| **Kroki z `requiresApproval: false` idą same** (folder, klon, branch, kopiowanie bloczków) | To proste skrypty bez AI. Każdy inny krok czeka na „Zatwierdź”. Zmienisz to jedną linią w YAML. |
+| **„Akceptuj wynik” = zatwierdzenie następnego kroku**; „Powtórz z uwagą” działa na każdym zakończonym kroku | Osobny stan „wynik zaakceptowany” dublowałby klik. Powtórka wcześniejszego kroku wstrzymuje późniejsze. |
+| **Kroki idą po kolei** (także „per repo”) | KISS i kontrola. Równoległość skryptów per repo — do dodania, gdy będzie potrzebna. Różne zadania działają równolegle. |
+| **Skrypty dostają kontekst przez zmienne `FLOWHUB_*`** | Jeden prosty kontrakt; skrypt czyta tylko to, czego potrzebuje. Lista: `StepEnvironment.cs`. |
+| **Po restarcie aplikacji** krok „w trakcie” dostaje status Błąd, a „zatwierdzony” wraca do akceptacji | Proces skryptu/agenta nie przeżywa restartu — decyzja wraca do Ciebie. |
+| **Bloczki w repo zadania trafiają do `.git/info/exclude`**; śledzonych plików repo nie nadpisujemy | Agenci i skille FlowHub nie wejdą do PR ani nie zepsują własnych plików repo. |
+
 **Nie sprawdzone:** przeciąganie kart prawdziwą myszą (podgląd nie emuluje natywnego drag & drop). Logika upuszczenia i zapis w API są sprawdzone zdarzeniami.

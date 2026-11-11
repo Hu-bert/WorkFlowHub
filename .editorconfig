@@ -1,0 +1,16 @@
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{ts,vue,js,json,yaml,yml,css,html,md}]
+indent_size = 2
+
+# Windows PowerShell 5.1 czyta skrypt bez BOM jako ANSI i psuje polskie znaki.
+[*.ps1]
+charset = utf-8-bom
+end_of_line = crlf
