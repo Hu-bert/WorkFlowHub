@@ -52,7 +52,8 @@ public static class WorkItemMapper
         step.Attempt,
         step.StartedAt,
         step.FinishedAt,
-        ToDto(step.Usage));
+        ToDto(step.Usage),
+        step.SessionId);
 
     public static TokenUsageDto ToDto(TokenUsage usage) => new(
         usage.Model,

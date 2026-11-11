@@ -12,6 +12,7 @@ import ConsoleOutput from './ConsoleOutput.vue'
 import StatusBadge from './StatusBadge.vue'
 
 const props = defineProps<{ step: StepRun }>()
+const emit = defineEmits<{ terminal: [step: StepRun] }>()
 const detail = useWorkItemDetail()
 const catalog = useCatalog()
 
@@ -165,6 +166,11 @@ const approveLabel = computed(() => (props.step.kind === 'Manual' ? 'Potwierdzam
           <v-expansion-panel-text><ConsoleOutput :text="output" /></v-expansion-panel-text>
         </v-expansion-panel>
       </v-expansion-panels>
+
+      <div v-if="step.sessionId" class="actions">
+        <v-btn variant="tonal" prepend-icon="mdi-console" @click="emit('terminal', step)">Kontynuuj w terminalu</v-btn>
+        <span class="fh-muted meta">Ta sama sesja Copilot — możesz dopytać albo poprawić wynik rozmową.</span>
+      </div>
 
       <div class="retry">
         <v-text-field v-model="remark" label="Uwaga do powtórki (opcjonalnie)" hide-details />

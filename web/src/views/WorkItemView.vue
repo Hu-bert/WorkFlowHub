@@ -7,6 +7,8 @@ import RepoStatusTable from '@/components/RepoStatusTable.vue'
 import StepList from '@/components/StepList.vue'
 import StepPanel from '@/components/StepPanel.vue'
 import TaskFiles from '@/components/TaskFiles.vue'
+import TerminalDialog from '@/components/TerminalDialog.vue'
+import type { TerminalTarget } from '@/api/terminal'
 import { useCatalog } from '@/stores/catalog'
 import { useNotifications } from '@/stores/notifications'
 import { useWorkItemDetail } from '@/stores/workItemDetail'
@@ -47,6 +49,25 @@ watch(
   () => (pickedStepId.value = null),
 )
 
+/** Otwarty terminal Copilota: repo zadania albo kontynuacja sesji kroku. */
+const terminal = ref<{ target: TerminalTarget; title: string } | null>(null)
+
+function openTerminal(repo: string) {
+  if (!item.value) return
+  terminal.value = {
+    target: { workItemId: item.value.summary.id, repo },
+    title: `Copilot — ${item.value.summary.key} · ${repo || 'katalog zadania'}`,
+  }
+}
+
+function resumeInTerminal(step: StepRun) {
+  if (!item.value) return
+  terminal.value = {
+    target: { workItemId: item.value.summary.id, stepId: step.id },
+    title: `Copilot — ${item.value.summary.key} · kontynuacja: ${step.name}`,
+  }
+}
+
 async function moveTo(column: string) {
   if (!item.value) return
   try {
@@ -83,6 +104,22 @@ async function moveTo(column: string) {
         >
           Uruchom flow
         </v-btn>
+        <v-menu>
+          <template #activator="{ props: menu }">
+            <v-btn v-bind="menu" variant="tonal" prepend-icon="mdi-console">Terminal</v-btn>
+          </template>
+          <v-list density="compact">
+            <v-list-subheader>Copilot CLI w katalogu…</v-list-subheader>
+            <v-list-item
+              v-for="repo in item.repos"
+              :key="repo.name"
+              prepend-icon="mdi-source-repository"
+              :title="repo.name"
+              @click="openTerminal(repo.name)"
+            />
+            <v-list-item prepend-icon="mdi-folder-outline" title="Katalog zadania" @click="openTerminal('')" />
+          </v-list>
+        </v-menu>
         <v-select
           :model-value="item.summary.boardColumn"
           :items="catalog.columns"
@@ -117,7 +154,7 @@ async function moveTo(column: string) {
       </v-card>
 
       <div class="main">
-        <StepPanel v-if="selectedStep" :step="selectedStep" />
+        <StepPanel v-if="selectedStep" :step="selectedStep" @terminal="resumeInTerminal" />
         <TaskFiles :work-item-id="item.summary.id" :refresh-key="item.summary.stepsDone" />
 
         <v-expansion-panels variant="accordion">
@@ -135,6 +172,8 @@ async function moveTo(column: string) {
         </v-expansion-panels>
       </div>
     </div>
+
+    <TerminalDialog :target="terminal?.target ?? null" :title="terminal?.title ?? ''" @close="terminal = null" />
   </section>
 </template>
 

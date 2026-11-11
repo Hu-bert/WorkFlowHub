@@ -34,6 +34,7 @@ const step = (overrides: Partial<StepRun> = {}): StepRun => ({
   startedAt: null,
   finishedAt: null,
   usage: noUsage,
+  sessionId: null,
   ...overrides,
 })
 

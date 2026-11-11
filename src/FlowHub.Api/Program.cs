@@ -33,6 +33,7 @@ app.UseExceptionHandler();
 app.UseSerilogRequestLogging();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseWebSockets();
 
 // Nowy moduł API = nowy plik w Endpoints/ + jedna linia tutaj.
 app.MapHealthEndpoints();
@@ -44,6 +45,7 @@ app.MapAgentEndpoints();
 app.MapTokenEndpoints();
 app.MapIntegrationEndpoints();
 app.MapSettingsEndpoints();
+app.MapTerminalEndpoints();
 app.MapHub<LiveHub>(LiveHub.Route);
 app.MapFallbackToFile("index.html");
 

@@ -39,6 +39,9 @@ public sealed class StepRun
     /// <summary>Uwaga użytkownika przy „Powtórz z uwagą”.</summary>
     public string? Remark { get; private set; }
 
+    /// <summary>Id sesji Copilot CLI tego kroku — pozwala kontynuować ją w terminalu.</summary>
+    public string? SessionId { get; private set; }
+
     public string Log { get; private set; } = "";
     public int Attempt { get; private set; } = 1;
     public DateTime? StartedAt { get; private set; }
@@ -99,6 +102,7 @@ public sealed class StepRun
         Result = null;
         Error = null;
         Log = "";
+        SessionId = null;
         Usage = TokenUsage.Empty;
     }
 
@@ -125,6 +129,8 @@ public sealed class StepRun
     }
 
     public void AddUsage(TokenUsage usage) => Usage = Usage.Add(usage);
+
+    public void AttachSession(string sessionId) => SessionId = sessionId;
 
     public void AppendLog(string text) => Log += text;
 

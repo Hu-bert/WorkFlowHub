@@ -104,6 +104,10 @@ public sealed class AgentStepExecutor(
         {
             switch (agentEvent)
             {
+                case AgentEvent.SessionStarted started:
+                    context.Step.AttachSession(started.SessionId);
+                    break;
+
                 case AgentEvent.MessageDelta delta:
                     await log.WriteAsync(delta.Text, ct);
                     break;
