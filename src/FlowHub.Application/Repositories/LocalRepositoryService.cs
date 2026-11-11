@@ -95,7 +95,7 @@ public sealed class LocalRepositoryService(IOptions<LocalRepositoriesOptions> op
             throw new DomainException($"Repo {local.Name} nie ma zdalnego adresu (origin) — nie da się go sklonować do zadania.");
         }
 
-        return catalog.Add(new CodeRepository { Name = local.Name, Url = local.RemoteUrl });
+        return catalog.Save(new CodeRepository { Name = local.Name, Url = local.RemoteUrl }, null);
     }
 
     private LocalRepository Describe(string root, string path, GitWorkingCopy copy)

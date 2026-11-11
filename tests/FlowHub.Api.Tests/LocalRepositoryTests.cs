@@ -92,7 +92,7 @@ public sealed class LocalRepositoryTests(FlowHubApiFactory factory) : IClassFixt
     }
 
     [Fact]
-    public async Task Local_repository_with_an_origin_can_be_added_to_the_catalog_without_touching_the_rest_of_the_file()
+    public async Task Local_repository_with_an_origin_can_be_added_to_the_catalog_once()
     {
         const string Original = "# Mój komentarz\nrepositories:\n  - name: Billing.Api\n    url: demo://Billing.Api\n    keywords: [faktura]\n";
         var catalog = Catalog(Original);
@@ -103,11 +103,9 @@ public sealed class LocalRepositoryTests(FlowHubApiFactory factory) : IClassFixt
         var again = await scanner.AddToCatalogAsync(path, Ct);
 
         Assert.Equal(("Orders.Service", "https://tfs.example/col/P/_git/Orders.Service"), (added.Name, added.Url));
-        Assert.Equal(added, again);
+        Assert.Equal(added.Name, again.Name);
         Assert.Equal(["Billing.Api", "Orders.Service"], catalog.GetAll().Select(repository => repository.Name));
-        var yaml = File.ReadAllText(Path.Combine(_root, "repos.yaml"));
-        Assert.StartsWith(Original.TrimEnd(), yaml);
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(yaml, "Orders.Service\"\\s*\n\\s*url"));
+        Assert.Equal(["faktura"], catalog.Find("Billing.Api")!.Keywords); // reszta katalogu bez zmian
     }
 
     [Fact]

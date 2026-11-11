@@ -31,11 +31,9 @@ appsettings.*.local.json
 # Zbudowany frontend (generowany przez npm run build)
 src/FlowHub.Api/wwwroot/
 
-# Tymczasowa baza narz�dzia dotnet ef
+# Tymczasowa baza narzędzia dotnet ef
 design-time.db
 
-# Próbki odpowiedzi API zebrane w pracy (mogą zawierać dane firmowe)
-api-samples/
 
 # Zapamiętane mapy repozytoriów (lokalnie; mogą zawierać opis firmowego kodu)
 knowledge/

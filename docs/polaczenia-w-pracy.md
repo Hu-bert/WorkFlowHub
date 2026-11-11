@@ -1,7 +1,6 @@
-# Połączenia w pracy — co sprawdzić i co zebrać
+# Połączenia w pracy — jak podłączyć i co sprawdzić
 
-Sama wersja serwera **nie wystarczy**, żeby klient API zadziałał za pierwszym razem. Wersja mówi, które adresy są dostępne; do dopasowania pól potrzebne są jeszcze **przykładowe odpowiedzi JSON** z kilku adresów oraz kilka informacji o tym, jak firma łączy systemy ze sobą.
-
+Klienty TFS, TeamCity, Octopus i Jira są napisane wg dokumentacji API i nie były sprawdzone na prawdziwych serwerach. Ten plik mówi, jak je podłączyć i co zrobić, gdy czegoś nie widać.
 ## 1. Wersje — gdzie je znaleźć
 
 | System | W przeglądarce | Przez API (GET) |
@@ -25,25 +24,15 @@ Najprościej: wpisz adres i token w **Ustawieniach** FlowHub i kliknij **„Spra
 
 FlowHub tylko czyta. Tokeny wpisujesz w Ustawieniach — są szyfrowane na Twoim komputerze i nie trafiają do repo.
 
-## 3. Przykładowe odpowiedzi — skrypt
+## 3. Gdy czegoś nie widać — diagnostyka
 
-Skrypt [tools/collect-api-samples.ps1](../tools/collect-api-samples.ps1) robi same zapytania GET i zapisuje odpowiedzi do `api-samples/` (katalog jest w `.gitignore`). Podaj jedno prawdziwe repo, branch z otwartym pull requestem, build configuration, projekt Octopus i klucz zadania:
+Repozytoria → rozwiń wiersz repo → **„Diagnostyka połączeń”**. Zobaczysz listę zapytań, które FlowHub wysłał do serwerów (bez tokenów), i odpowiedź na każde. „Kopiuj wynik” kopiuje całość do schowka.
 
-```powershell
-./tools/collect-api-samples.ps1 `
-    -TfsCollectionUrl https://tfs.firma.pl/tfs/DefaultCollection -TfsProject Projekt -TfsRepo Billing.Api `
-    -TeamCityUrl https://teamcity.firma.pl -TeamCityBuildType Billing_Api_Build `
-    -OctopusUrl https://octopus.firma.pl -OctopusProject billing-api `
-    -JiraUrl https://jira.firma.pl -JiraIssue PROJ-123 `
-    -Branch feature/PROJ-123-opis
-```
+- `404 — nie znaleziono` przy pull requestach: inna nazwa repo albo projekt w TFS niż w adresie repo w katalogu.
+- Brak builda: ustaw źródło buildów „Statusy z TFS” albo wpisz id build configuration przy repo (Repozytoria → Katalog repo → Edytuj).
+- Puste środowiska: FlowHub nie dopasował release do brancha — patrz pytanie 2 niżej.
 
-Systemy, których nie podasz, są pomijane. O tokeny skrypt pyta w oknie (nie zapisuje ich). Błąd, np. 404, też trafia do pliku — to również informacja o serwerze.
-
-> **Zanim pokażesz te pliki komukolwiek (także modelowi AI):** przejrzyj je i usuń albo zamień dane, których nie wolno wynosić z firmy — nazwiska, adresy e-mail, adresy serwerów, treść zadań. Do dopasowania klienta wystarczą nazwy pól i przykładowe wartości. Sprawdź też, czy firmowe zasady w ogóle na to pozwalają.
-
-Adresy TeamCity i Octopus w skrypcie są wg dokumentacji i **nie były sprawdzone na prawdziwym serwerze** — jeśli któryś zwróci błąd, to też jest wynik.
-
+> **Zanim pokażesz wynik komukolwiek (także modelowi AI):** usuń dane, których nie wolno wynosić z firmy — adresy serwerów, nazwy projektów. Sprawdź też, czy firmowe zasady na to pozwalają.
 ## 4. Trzy pytania, na które API nie odpowie
 
 1. **TeamCity:** jak nazywa się branch w buildach — tak jak w Git (`feature/PROJ-123-opis`), czy skrócony? Numer buildu zawiera nazwę brancha — w jakim formacie?

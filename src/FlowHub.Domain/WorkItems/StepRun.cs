@@ -49,8 +49,7 @@ public sealed class StepRun
     public TokenUsage Usage { get; private set; } = TokenUsage.Empty;
 
     public bool IsFinished => Status is StepStatus.Succeeded or StepStatus.Skipped;
-    public bool IsOverBudget => TokenBudget > 0 && Usage.TotalTokens >= TokenBudget;
-    public TimeSpan? Duration => FinishedAt - StartedAt;
+
 
     public static StepRun Create(Guid workItemId, StepDefinition definition, int order, string? repoName) => new()
     {

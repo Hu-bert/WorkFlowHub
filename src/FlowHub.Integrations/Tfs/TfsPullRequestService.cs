@@ -2,6 +2,7 @@ using System.Text.Json;
 using FlowHub.Application.Integrations;
 using FlowHub.Domain;
 using FlowHub.Domain.Repositories;
+using FlowHub.Integrations.Http;
 
 namespace FlowHub.Integrations.Tfs;
 
@@ -152,13 +153,7 @@ public static class TfsMapper
             : "Polityka";
 
     /// <summary>Listy w TFS są opakowane: { "count": n, "value": [...] }.</summary>
-    public static IEnumerable<JsonElement> Items(JsonElement element, string property = "value") =>
-        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out var items) && items.ValueKind == JsonValueKind.Array
-            ? items.EnumerateArray()
-            : [];
+    private static IEnumerable<JsonElement> Items(JsonElement element, string property = "value") => Json.Items(element, property);
 
-    public static string? Text(JsonElement element, string property) =>
-        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
+    private static string? Text(JsonElement element, string property) => Json.Text(element, property);
 }

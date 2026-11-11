@@ -51,7 +51,7 @@ public interface IRepositoryLinks
 }
 
 /// <summary>Repozytorium widoczne na serwerze (TFS) — do wyboru przy zadaniu i dodania do katalogu repos.yaml.</summary>
-public sealed record RemoteRepository(string Name, string Url, string DefaultBranch, string? WebUrl);
+public sealed record RemoteRepository(string Name, string Url, string DefaultBranch);
 
 /// <summary>Lista repozytoriów z serwera kodu (TFS / Azure DevOps Server).</summary>
 public interface IRepositoryDirectory

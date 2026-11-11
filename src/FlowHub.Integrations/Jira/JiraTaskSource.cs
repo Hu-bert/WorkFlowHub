@@ -55,8 +55,5 @@ public sealed class JiraTaskSource(ApiClient client, IOptions<JiraOptions> optio
             $"{baseUrl}/browse/{Text(issue, "key") ?? key}");
     }
 
-    private static string? Text(JsonElement element, string property) =>
-        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
+    private static string? Text(JsonElement element, string property) => Json.Text(element, property);
 }

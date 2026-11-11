@@ -133,7 +133,7 @@ CLI czyta i łączy: `.github/copilot-instructions.md`, `.github/instructions/**
 - `CopilotClient` → `StartAsync()` → `CreateSessionAsync(new SessionConfig { Model, OnPermissionRequest, Streaming = true })` → `session.On<SessionEvent>(...)` → `SendAsync(new MessageOptions { Prompt })`.
 - Zdarzenia: `AssistantMessageDeltaEvent`, `AssistantMessageEvent`, `ToolExecutionStartEvent`, `ToolExecutionCompleteEvent`, `SessionIdleEvent`, `SessionErrorEvent`.
 - Uprawnienia: `PermissionDecision.ApproveOnce()` / `Reject(feedback)` — **nie** `PermissionHandler.ApproveAll`.
-- Zdarzenie z tokenami (`assistant.usage`) **(?)** — do sprawdzenia w Fazie 4; plan B: `/usage` lub `events.jsonl`.
+- Tokenów nie ma w strumieniu zdarzeń — CLI zapisuje je na końcu do pliku z `--usage-output-file` (patrz „Sprawdzone na prawdziwym CLI” niżej).
 
 ## Sprawdzone na prawdziwym CLI (1.0.109, 2026-11-11)
 
