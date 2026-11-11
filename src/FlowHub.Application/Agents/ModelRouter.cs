@@ -8,6 +8,13 @@ namespace FlowHub.Application.Agents;
 public sealed class ModelOptions
 {
     public const string SectionName = "Models";
+    public const string MeteredPlan = "Metered";
+    public const string UnlimitedPlan = "Unlimited";
+
+    /// <summary>"Metered" = pilnujemy budżetów i kosztu; "Unlimited" (np. Copilot Enterprise) = tylko liczymy tokeny.</summary>
+    public string Plan { get; init; } = MeteredPlan;
+
+    public bool Unlimited => string.Equals(Plan, UnlimitedPlan, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Poziom używany, gdy krok nie podaje modelu. Domyślnie najtańszy.</summary>
     public string DefaultTier { get; init; } = "cheap";
@@ -55,6 +62,11 @@ public sealed class ModelRouter(IOptions<ModelOptions> options)
     /// <summary>Uzupełnia koszt, jeśli agent go nie podał, a znamy cenę modelu.</summary>
     public TokenUsage Price(TokenUsage usage)
     {
+        if (Options.Unlimited)
+        {
+            return usage with { Cost = 0 };
+        }
+
         if (usage.Cost > 0 || usage.Model is null || !Options.Prices.TryGetValue(usage.Model, out var price))
         {
             return usage;

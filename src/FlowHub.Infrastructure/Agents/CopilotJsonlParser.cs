@@ -5,15 +5,18 @@ using FlowHub.Domain.WorkItems;
 namespace FlowHub.Infrastructure.Agents;
 
 /// <summary>
-/// Zamienia linie JSONL z `copilot --output-format json` na zdarzenia agenta.
+/// Zamienia linie JSONL z `copilot -p … --output-format json` na zdarzenia agenta.
 ///
-/// UWAGA: schemat zdarzeń przyjęty na podstawie nazw z dokumentacji Copilot SDK
-/// (assistant.message_delta, tool.execution_start, …) — NIE zweryfikowany na prawdziwym CLI.
+/// Schemat sprawdzony na Copilot CLI 1.0.109 (2026-11-11): każda linia to
+/// {"type": "...", "data": {...}}. Tokenów NIE ma w strumieniu — CLI zapisuje je na końcu
+/// do pliku z --usage-output-file (patrz <see cref="ParseUsageFile"/>).
 /// Parser jest tolerancyjny: nieznane zdarzenia pomija, a tekst spoza JSON pokazuje w konsoli.
-/// Po pierwszym uruchomieniu w pracy porównaj z docs/copilot-cli.md i popraw nazwy pól tutaj.
 /// </summary>
 public sealed class CopilotJsonlParser
 {
+    private const int ToolDetailMaxLength = 300;
+
+    private readonly Dictionary<string, string> _toolNames = [];
     private bool _sawDelta;
 
     /// <summary>Ostatnia pełna wypowiedź agenta — używana jako podsumowanie kroku.</summary>
@@ -39,35 +42,73 @@ public sealed class CopilotJsonlParser
         }
     }
 
+    /// <summary>
+    /// Plik z --usage-output-file → zużycie per model. `usage.inputTokens` to całe wejście wszystkich wywołań,
+    /// razem z odczytami z cache. Do budżetu liczymy wejście „świeże” (bez odczytów z cache, które są tanie).
+    /// </summary>
+    public static IReadOnlyList<TokenUsage> ParseUsageFile(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("modelMetrics", out var models) || models.ValueKind != JsonValueKind.Object)
+        {
+            return [];
+        }
+
+        var result = new List<TokenUsage>();
+        foreach (var model in models.EnumerateObject())
+        {
+            if (!model.Value.TryGetProperty("usage", out var usage))
+            {
+                continue;
+            }
+
+            var cacheRead = Number(usage, "cacheReadTokens");
+            var cacheWrite = Number(usage, "cacheWriteTokens");
+
+            result.Add(new TokenUsage
+            {
+                Model = model.Name,
+                InputTokens = Math.Max(0, Number(usage, "inputTokens") - cacheRead),
+                OutputTokens = Number(usage, "outputTokens"),
+                CacheReadTokens = cacheRead,
+                CacheWriteTokens = cacheWrite,
+            });
+        }
+
+        return result;
+    }
+
     private AgentEvent? Map(string type, JsonElement data) => type switch
     {
+        "session.start" => Text(data, "sessionId") is { } id ? new AgentEvent.SessionStarted(id) : null,
         "assistant.message_delta" => Delta(data),
         "assistant.message" => FullMessage(data),
-        "tool.execution_start" => new AgentEvent.ToolStarted(Text(data, "toolName", "name") ?? "tool", Text(data, "arguments", "input")),
-        "tool.execution_complete" => new AgentEvent.ToolFinished(Text(data, "toolName", "name") ?? "tool", Flag(data, "success") ?? true),
-        "assistant.usage" => new AgentEvent.Usage(Usage(data)),
+        "tool.execution_start" => ToolStarted(data),
+        "tool.execution_complete" => ToolFinished(data),
         "session.error" => new AgentEvent.Failed(Text(data, "message", "error") ?? "Błąd sesji Copilot."),
         _ => null,
     };
 
     private AgentEvent? Delta(JsonElement data)
     {
-        var text = Text(data, "deltaContent", "delta", "content");
-        if (text is null)
+        var text = Text(data, "deltaContent");
+        if (string.IsNullOrEmpty(text))
         {
             return null;
         }
 
         _sawDelta = true;
-        LastMessage += text;
         return new AgentEvent.MessageDelta(text);
     }
 
-    /// <summary>Pełna wiadomość: gdy wcześniej szły delty, tekst jest już w konsoli — nie dublujemy go.</summary>
+    /// <summary>
+    /// Pełna wiadomość. Gdy wcześniej szły delty, tekst jest już w konsoli — domykamy tylko linię.
+    /// Wiadomość z samym wywołaniem narzędzia ma pustą treść i jest pomijana.
+    /// </summary>
     private AgentEvent? FullMessage(JsonElement data)
     {
-        var text = Text(data, "content", "text");
-        if (text is null)
+        var text = Text(data, "content");
+        if (string.IsNullOrWhiteSpace(text))
         {
             return null;
         }
@@ -75,18 +116,30 @@ public sealed class CopilotJsonlParser
         var alreadyShown = _sawDelta;
         _sawDelta = false;
         LastMessage = text;
-        return alreadyShown ? null : new AgentEvent.MessageDelta(text + Environment.NewLine);
+        return new AgentEvent.MessageDelta(alreadyShown ? Environment.NewLine : text + Environment.NewLine);
     }
 
-    private static TokenUsage Usage(JsonElement data) => new()
+    private AgentEvent ToolStarted(JsonElement data)
     {
-        Model = Text(data, "model"),
-        InputTokens = Number(data, "inputTokens", "input_tokens"),
-        OutputTokens = Number(data, "outputTokens", "output_tokens"),
-        CacheReadTokens = Number(data, "cacheReadTokens", "cache_read_tokens"),
-        CacheWriteTokens = Number(data, "cacheWriteTokens", "cache_write_tokens"),
-        Cost = (decimal)(Decimal(data, "cost") ?? 0),
-    };
+        var name = Text(data, "toolName") ?? "tool";
+        if (Text(data, "toolCallId") is { } id)
+        {
+            _toolNames[id] = name;
+        }
+
+        var detail = Text(data, "arguments");
+        return new AgentEvent.ToolStarted(name, detail?.Length > ToolDetailMaxLength ? detail[..ToolDetailMaxLength] + "…" : detail);
+    }
+
+    /// <summary>Zakończenie narzędzia nie niesie nazwy — bierzemy ją z wcześniejszego startu po toolCallId.</summary>
+    private AgentEvent ToolFinished(JsonElement data)
+    {
+        var name = Text(data, "toolCallId") is { } id && _toolNames.Remove(id, out var known)
+            ? known
+            : Text(data, "toolName") ?? "tool";
+
+        return new AgentEvent.ToolFinished(name, Flag(data, "success") ?? true);
+    }
 
     private static bool TryParseJson(string line, out JsonDocument document)
     {
@@ -132,9 +185,6 @@ public sealed class CopilotJsonlParser
 
     private static long Number(JsonElement element, params string[] names) =>
         Property(element, names) is { ValueKind: JsonValueKind.Number } value && value.TryGetInt64(out var number) ? number : 0;
-
-    private static double? Decimal(JsonElement element, params string[] names) =>
-        Property(element, names) is { ValueKind: JsonValueKind.Number } value ? value.GetDouble() : null;
 
     private static bool? Flag(JsonElement element, params string[] names) =>
         Property(element, names) is { ValueKind: JsonValueKind.True or JsonValueKind.False } value ? value.GetBoolean() : null;

@@ -193,6 +193,24 @@ public sealed class AgentStepExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task Usage_reported_after_the_session_ended_only_warns_about_the_budget()
+    {
+        var context = Context(new StepDefinition { Id = "plan", Name = "Plan", Kind = StepKind.Agent, Agent = "a", TokenBudget = 1000 });
+        _runner.Events =
+        [
+            new AgentEvent.MessageDelta("gotowe"),
+            new AgentEvent.Usage(new TokenUsage { InputTokens = 5000 }, Final: true),
+            new AgentEvent.Completed("ok"),
+        ];
+
+        var outcome = await _executor.ExecuteAsync(context, _stepLog, CancellationToken.None);
+
+        Assert.True(outcome.Succeeded);
+        Assert.Contains("Sesja przekroczyła budżet kroku", string.Concat(_log));
+        Assert.Equal(5000, context.Step.Usage.TotalTokens);
+    }
+
+    [Fact]
     public async Task Agent_does_not_start_when_the_task_budget_is_used_up()
     {
         var context = Context();

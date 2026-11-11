@@ -8,6 +8,7 @@ export const router = createRouter({
     { path: '/repos', name: 'repos', component: () => import('@/views/ReposView.vue') },
     { path: '/flows', name: 'flows', component: () => import('@/views/FlowsView.vue') },
     { path: '/tokens', name: 'tokens', component: () => import('@/views/TokensView.vue') },
+    { path: '/settings', name: 'settings', component: () => import('@/views/SettingsView.vue') },
     {
       path: '/work-items/:id',
       name: 'work-item',

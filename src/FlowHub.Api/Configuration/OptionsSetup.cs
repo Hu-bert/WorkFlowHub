@@ -3,6 +3,9 @@ using FlowHub.Application.Agents;
 using FlowHub.Application.Board;
 using FlowHub.Application.Integrations;
 using FlowHub.Application.Workspace;
+using FlowHub.Infrastructure.Settings;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace FlowHub.Api.Configuration;
 
@@ -12,6 +15,12 @@ public static class OptionsSetup
     public static WebApplicationBuilder AddFlowHubOptions(this WebApplicationBuilder builder)
     {
         var contentRoot = builder.Environment.ContentRootPath;
+
+        // Ustawienia ze strony „Ustawienia” (plik poza repo) nakładają się na appsettings.json.
+        builder.Configuration.AddJsonFile(UserSettings.SettingsFile(builder.Configuration), optional: true, reloadOnChange: false);
+
+        // IOptions<T> czyta wartości na bieżąco — zmiana ustawień działa bez restartu.
+        builder.Services.Replace(ServiceDescriptor.Singleton(typeof(IOptions<>), typeof(LiveOptions<>)));
 
         builder.Services.Configure<BoardOptions>(builder.Configuration.GetSection(BoardOptions.SectionName));
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection(AgentOptions.SectionName));
@@ -32,5 +41,11 @@ public static class OptionsSetup
             options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
         return builder;
+    }
+
+    private sealed class LiveOptions<T>(IOptionsMonitor<T> monitor) : IOptions<T>
+        where T : class
+    {
+        public T Value => monitor.CurrentValue;
     }
 }

@@ -1,5 +1,12 @@
 namespace FlowHub.Application.Agents;
 
+/// <summary>Nazwy runnerów wybieranych w "Agent:Runner".</summary>
+public static class AgentRunners
+{
+    public const string Fake = "Fake";
+    public const string CopilotCli = "CopilotCli";
+}
+
 /// <summary>Ustawienia agenta (appsettings.json → "Agent").</summary>
 public sealed class AgentOptions
 {

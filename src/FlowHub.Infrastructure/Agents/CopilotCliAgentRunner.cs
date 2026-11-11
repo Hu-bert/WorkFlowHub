@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Text;
 using FlowHub.Application.Agents;
+using FlowHub.Domain.WorkItems;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -13,7 +13,8 @@ namespace FlowHub.Infrastructure.Agents;
 ///
 /// Zasady bezpieczeństwa: nigdy --allow-all / --yolo; narzędzia tylko z listy kroku;
 /// przed uruchomieniem z `write` lub `shell` pytamy użytkownika o zgodę w UI.
-/// NIE przetestowane na prawdziwym CLI (brak dostępu) — patrz CopilotJsonlParser.
+/// Sprawdzone na Copilot CLI 1.0.109. W trybie -p CLI nie pyta o zgodę: narzędzie spoza listy
+/// --allow-tool jest odrzucane. Tokeny przychodzą dopiero na końcu (plik --usage-output-file).
 /// </summary>
 public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogger<CopilotCliAgentRunner> logger) : IAgentRunner
 {
@@ -26,7 +27,9 @@ public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogge
             yield break;
         }
 
-        using var process = Start(request);
+        var usageFile = Path.Combine(Path.GetTempPath(), $"flowhub-usage-{Guid.NewGuid():N}.json");
+        using var usageCleanup = new FileCleanup(usageFile);
+        using var process = Start(request, usageFile);
         if (process is null)
         {
             yield return new AgentEvent.Failed($"Nie udało się uruchomić Copilot CLI ('{options.Value.CliPath}'). Sprawdź instalację i ustawienie Agent:CliPath.");
@@ -51,6 +54,11 @@ public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogge
 
         await process.WaitForExitAsync(ct);
 
+        foreach (var usage in ReadUsage(usageFile))
+        {
+            yield return new AgentEvent.Usage(usage, Final: true);
+        }
+
         if (failed)
         {
             yield break;
@@ -64,24 +72,12 @@ public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogge
     private static List<string> RiskyTools(AgentRequest request) =>
         request.AllowedTools.Where(tool => tool.StartsWith("write") || tool.StartsWith("shell")).ToList();
 
-    private Process? Start(AgentRequest request)
+    private Process? Start(AgentRequest request, string usageFile)
     {
-        var info = new ProcessStartInfo(options.Value.CliPath)
-        {
-            WorkingDirectory = request.WorkingDirectory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        foreach (var argument in Arguments(request))
-        {
-            info.ArgumentList.Add(argument);
-        }
+        var info = CopilotCli.StartInfo(
+            options.Value.CliPath,
+            request.WorkingDirectory,
+            [.. Arguments(request), "--usage-output-file", usageFile]);
 
         try
         {
@@ -91,11 +87,23 @@ public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogge
         }
         catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
-            logger.LogError(error, "Nie udało się uruchomić Copilot CLI: {Path}", options.Value.CliPath);
+            logger.LogError(error, "Nie udało się uruchomić Copilot CLI: {Path}", info.FileName);
             return null;
         }
     }
 
+    private IReadOnlyList<TokenUsage> ReadUsage(string usageFile)
+    {
+        try
+        {
+            return File.Exists(usageFile) ? CopilotJsonlParser.ParseUsageFile(File.ReadAllText(usageFile)) : [];
+        }
+        catch (Exception error) when (error is IOException or System.Text.Json.JsonException)
+        {
+            logger.LogWarning(error, "Nie udało się odczytać zużycia tokenów z {File}", usageFile);
+            return [];
+        }
+    }
     /// <summary>Argumenty CLI — nazwy flag zgodne z docs/copilot-cli.md.</summary>
     public static IEnumerable<string> Arguments(AgentRequest request)
     {
@@ -125,10 +133,32 @@ public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogge
             yield return tool;
         }
 
+        // Pliki wynikowe kroku agent musi móc zapisać — zgoda tylko na te konkretne ścieżki, nie na cały zapis.
+        foreach (var output in request.ExpectedOutputs)
+        {
+            yield return "--allow-tool";
+            yield return $"write({output})";
+        }
+
         foreach (var directory in request.AdditionalDirectories)
         {
             yield return "--add-dir";
             yield return directory;
+        }
+    }
+
+    private sealed class FileCleanup(string path) : IDisposable
+    {
+        public void Dispose()
+        {
+            try
+            {
+                File.Delete(path);
+            }
+            catch (IOException)
+            {
+                // Plik tymczasowy — posprząta system.
+            }
         }
     }
 

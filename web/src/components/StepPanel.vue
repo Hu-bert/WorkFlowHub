@@ -104,7 +104,7 @@ const approveLabel = computed(() => (props.step.kind === 'Manual' ? 'Potwierdzam
 
       <div v-if="isAgent" class="row">
         <v-combobox v-model="model" :items="modelOptions" label="Model (poziom albo id modelu)" hide-details />
-        <v-text-field v-model.number="tokenBudget" label="Budżet tokenów (0 = bez limitu)" type="number" min="0" hide-details />
+        <v-text-field v-if="!catalog.models?.unlimited" v-model.number="tokenBudget" label="Budżet tokenów (0 = bez limitu)" type="number" min="0" hide-details />
       </div>
 
       <div class="actions">
@@ -122,7 +122,7 @@ const approveLabel = computed(() => (props.step.kind === 'Manual' ? 'Potwierdzam
     </template>
 
     <!-- W trakcie -->
-    <BudgetBar v-if="isAgent && !isProposed" :used="step.usage.totalTokens" :limit="step.tokenBudget" label="Budżet kroku" />
+    <BudgetBar v-if="isAgent && !isProposed && !catalog.models?.unlimited" :used="step.usage.totalTokens" :limit="step.tokenBudget" label="Budżet kroku" />
 
     <template v-if="isActive">
       <v-alert v-if="permission" type="warning" variant="tonal" prominent title="Agent prosi o zgodę" class="permission">

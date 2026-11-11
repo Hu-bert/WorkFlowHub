@@ -24,6 +24,8 @@ export interface ModelsInfo {
   tiers: { tier: string; model: string }[]
   taskTokenBudget: number
   agentRunner: string
+  /** Plan bez limitu (np. Copilot Enterprise): bez budżetów i wyceny. */
+  unlimited: boolean
 }
 
 export const fetchTokenReport = () => getJson<TokenReport>('/api/tokens/report')

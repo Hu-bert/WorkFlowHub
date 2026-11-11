@@ -3,6 +3,7 @@ using FlowHub.Application.Engine;
 using FlowHub.Application.Engine.Scripts;
 using FlowHub.Application.Flows;
 using FlowHub.Application.Integrations;
+using FlowHub.Application.Settings;
 using FlowHub.Application.Tokens;
 using FlowHub.Application.WorkItems;
 using FlowHub.Application.Workspace;
@@ -20,6 +21,8 @@ public static class DependencyInjection
         services.AddScoped<WorkItemService>();
         services.AddScoped<WorkItemFiles>();
         services.AddScoped<TokenReportService>();
+        services.AddSingleton<SettingsService>();
+        services.AddSingleton<ISettingsModule, ModelsSettingsModule>();
 
         return services.AddFlowEngine();
     }

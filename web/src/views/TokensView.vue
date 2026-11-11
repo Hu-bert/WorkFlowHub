@@ -77,8 +77,9 @@ const maxDay = computed(() => Math.max(1, ...(report.value?.byDay.map((day) => d
         <p class="fh-muted">
           Agent: <strong>{{ models.agentRunner }}</strong> · poziom domyślny: <strong>{{ models.defaultTier }}</strong> ·
           budżet zadania:
-          <strong>{{ models.taskTokenBudget ? formatTokens(models.taskTokenBudget) : 'bez limitu' }}</strong>.
-          Zmiana w <code>appsettings.json</code> → <code>Models</code>.
+          <strong>{{ models.taskTokenBudget ? formatTokens(models.taskTokenBudget) : 'bez limitu' }}</strong>
+          <template v-if="models.unlimited"> · plan bez limitu (koszt nie jest liczony)</template>. Zmiana w
+          <RouterLink to="/settings">Ustawieniach</RouterLink>.
         </p>
         <v-chip v-for="tier in models.tiers" :key="tier.tier" class="mr-2" variant="tonal" color="primary">
           tier:{{ tier.tier }} → {{ tier.model }}

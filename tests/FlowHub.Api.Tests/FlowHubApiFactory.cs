@@ -21,6 +21,8 @@ public sealed class FlowHubApiFactory : WebApplicationFactory<Program>
 
     public string WorkDirectory => Path.Combine(_tempDirectory, "work");
 
+    public string SettingsDirectory => Path.Combine(_tempDirectory, "settings");
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         Directory.CreateDirectory(_tempDirectory);
@@ -29,6 +31,7 @@ public sealed class FlowHubApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("ConnectionStrings:FlowHub", $"Data Source={Path.Combine(_tempDirectory, "test.db")};Pooling=False");
         builder.UseSetting("Workspace:WorkDirectory", WorkDirectory);
         builder.UseSetting("Agent:FakeDelayMs", "0");
+        builder.UseSetting("Settings:Directory", SettingsDirectory);
     }
 
     protected override void Dispose(bool disposing)

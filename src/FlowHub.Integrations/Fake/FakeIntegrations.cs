@@ -125,3 +125,15 @@ public sealed class FakeDeployServer : IDeployServer
         return Task.FromResult<DeploymentOverview?>(new DeploymentOverview(project, anyDeployed ? release : null, deployments));
     }
 }
+
+/// <summary>Lista repo z serwera — atrapa: repo z katalogu demo i kilka, których w katalogu jeszcze nie ma.</summary>
+public sealed class FakeRepositoryDirectory : IRepositoryDirectory
+{
+    private static readonly string[] Names =
+        ["Billing.Api", "Shared.Lib", "Customer.Portal", "Orders.Service", "Notifications.Worker", "Reporting.Web"];
+
+    public Task<IReadOnlyList<RemoteRepository>> ListAsync(CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<RemoteRepository>>(Names
+            .Select(name => new RemoteRepository(name, $"demo://{name}", "main", $"{TfsUrl}/{name}"))
+            .ToList());
+}

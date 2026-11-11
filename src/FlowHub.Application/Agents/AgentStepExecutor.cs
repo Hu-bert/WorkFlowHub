@@ -28,7 +28,7 @@ public sealed class AgentStepExecutor(
         }
 
         var request = Request(context);
-        var session = new AgentSession(context, log, models);
+        var session = new AgentSession(context, log, models, budget);
         await log.WriteAsync($"Model: {request.Model}{Environment.NewLine}", ct);
 
         // Przerwanie pętli (przekroczony budżet) kończy sesję agenta — runner sprząta po sobie.
@@ -36,7 +36,7 @@ public sealed class AgentStepExecutor(
         {
             await session.HandleAsync(agentEvent, ct);
 
-            if (session.OverBudget)
+            if (session.OverBudget && !session.Finished)
             {
                 return StepOutcome.Failure(
                     $"Przekroczono budżet tokenów kroku ({context.Step.Usage.TotalTokens:N0} / {context.Step.TokenBudget:N0}). "
@@ -89,13 +89,16 @@ public sealed class AgentStepExecutor(
     }
 
     /// <summary>Stan jednej sesji: przekłada zdarzenia agenta na log, tokeny i wynik kroku.</summary>
-    private sealed class AgentSession(StepContext context, IStepLog log, ModelRouter models)
+    private sealed class AgentSession(StepContext context, IStepLog log, ModelRouter models, TokenBudget budget)
     {
         private bool _warned;
 
         public StepOutcome? Outcome { get; private set; }
 
-        public bool OverBudget => TokenBudget.StepState(context.Step) == BudgetState.Exceeded;
+        public bool OverBudget => budget.StepState(context.Step) == BudgetState.Exceeded;
+
+        /// <summary>Sesja już się skończyła (zużycie przyszło jako podsumowanie) — nie ma czego przerywać.</summary>
+        public bool Finished { get; private set; }
 
         public async Task HandleAsync(AgentEvent agentEvent, CancellationToken ct)
         {
@@ -115,6 +118,7 @@ public sealed class AgentStepExecutor(
 
                 case AgentEvent.Usage usage:
                     context.Step.AddUsage(models.Price(usage.Tokens));
+                    Finished |= usage.Final;
                     await WarnOnceAsync(ct);
                     break;
 
@@ -130,14 +134,16 @@ public sealed class AgentStepExecutor(
 
         private async Task WarnOnceAsync(CancellationToken ct)
         {
-            if (_warned || TokenBudget.StepState(context.Step) != BudgetState.Warning)
+            var state = budget.StepState(context.Step);
+            if (_warned || state == BudgetState.Ok || (state == BudgetState.Exceeded && !Finished))
             {
                 return;
             }
 
             _warned = true;
+            var what = state == BudgetState.Exceeded ? "Sesja przekroczyła budżet kroku" : "Zużyto ponad 80% budżetu kroku";
             await log.WriteAsync(
-                $"{Environment.NewLine}⚠ Zużyto ponad 80% budżetu kroku ({context.Step.Usage.TotalTokens:N0} / {context.Step.TokenBudget:N0} tokenów).{Environment.NewLine}",
+                $"{Environment.NewLine}⚠ {what} ({context.Step.Usage.TotalTokens:N0} / {context.Step.TokenBudget:N0} tokenów).{Environment.NewLine}",
                 ct);
         }
 

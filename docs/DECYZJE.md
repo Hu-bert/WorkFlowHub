@@ -92,3 +92,25 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 | **Edytor bloczków zapisuje tylko `.md` i `.ps1` w `blocks/`** (skrypty z BOM) | Bezpieczeństwo ścieżek + pułapka PowerShell 5.1. |
 
 **Nie sprawdzone:** przeciąganie kart prawdziwą myszą (podgląd nie emuluje natywnego drag & drop). Logika upuszczenia i zapis w API są sprawdzone zdarzeniami.
+
+## Faza 9 — ustawienia, prawdziwy Copilot CLI, klienty TFS i Jira (2026-11-11)
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Strona „Ustawienia” z modułów** (`ISettingsModule`): Modele i plan, Copilot CLI, TFS, Jira, TeamCity, Octopus. UI rysuje pola z opisu modułu. | Prośba o jedno miejsce na połączenia, modularne. Nowy system = nowa klasa + linia w DI. |
+| **Ustawienia w `%LOCALAPPDATA%\FlowHub\settings.json`**, nakładane na `appsettings.json`; działają od razu, bez restartu | Poza repo, więc nic prywatnego nie trafi do commita. Katalog zmienisz przez `Settings:Directory`. |
+| **Tokeny w `secrets.json` obok, zaszyfrowane DPAPI** (bieżący użytkownik Windows). API nigdy ich nie zwraca. Zmienne środowiskowe / user-secrets nadal działają jako zapas (np. `Tfs__Token`). | Zasada „żadnych sekretów w repo i logach”, a wpisywanie tokenu w UI jest wygodniejsze niż user-secrets. |
+| **Plan „bez limitu” (`Models:Plan = Unlimited`)**: budżety nie ostrzegają i nie zatrzymują, koszt nie jest liczony | Copilot Enterprise bez ograniczeń w pracy. Tokeny dalej są liczone do raportu. |
+| **Poziomy modeli domyślnie `auto`, bez przykładowych cen** | Na prawdziwym koncie były dostępne inne modele niż przykładowe z Fazy 5 — zmyślone id wywaliłyby krok. Id modeli wpisujesz w Ustawieniach. |
+| **Agent może zapisać tylko zadeklarowane pliki wynikowe kroku** (`--allow-tool write(<pełna ścieżka>)`) | W trybie `-p` CLI odrzuca narzędzia spoza listy; bez tego `plan.md` czy `context-*.md` by nie powstały. Pełny `write` dalej tylko z listy kroku i za zgodą. |
+| **Wszyscy agenci dostali narzędzie `edit`** we frontmatterze | Lista `tools` agenta ogranicza narzędzia; bez `edit` agent nie umiał zapisać pliku wynikowego (sprawdzone na prawdziwym CLI). |
+| **Tokeny z pliku `--usage-output-file`** po zakończeniu sesji; przekroczony budżet kroku daje wtedy ostrzeżenie, nie błąd | CLI nie podaje tokenów w strumieniu. Skoro sesja już się skończyła, przerywanie nic by nie dało. Do budżetu liczymy wejście bez odczytów z cache. |
+| **Klient TFS** (pull requesty, wątki, polityki, lista repo) i **klient Jira** (treść zadania) | Żeby Ustawienia miały co przełączać. Mapowanie JSON jest pokryte testami na przykładach z dokumentacji. |
+
+**Sprawdzone na prawdziwym Copilot CLI 1.0.109:** format JSONL, wczytanie agenta i skilli z `.github/`, zgoda w UI, zapis pliku wynikowego, tokeny — cały krok „Analiza technologiczna” w aplikacji.
+
+**Nie sprawdzone:**
+1. Klienty TFS i Jira nie widziały prawdziwego serwera — adresy i pola są wg dokumentacji REST. Po wpisaniu adresu i tokenu użyj „Sprawdź połączenie”.
+2. TeamCity i Octopus mają tylko kartę ustawień z testem połączenia; dane dalej z atrapy.
+3. Szyfrowanie DPAPI działa tylko na Windows (aplikacja jest windowsowa).
+4. Koszt w kredytach AI z CLI (`totalNanoAiu`) nie jest przeliczany na pieniądze.

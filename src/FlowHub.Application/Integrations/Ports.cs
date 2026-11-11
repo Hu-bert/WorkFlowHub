@@ -34,3 +34,12 @@ public interface IDeployServer
 {
     Task<DeploymentOverview?> GetOverviewAsync(CodeRepository repository, string branch, CancellationToken ct);
 }
+
+/// <summary>Repozytorium widoczne na serwerze (TFS) — do wyboru przy zadaniu i dodania do katalogu repos.yaml.</summary>
+public sealed record RemoteRepository(string Name, string Url, string DefaultBranch, string? WebUrl);
+
+/// <summary>Lista repozytoriów z serwera kodu (TFS / Azure DevOps Server).</summary>
+public interface IRepositoryDirectory
+{
+    Task<IReadOnlyList<RemoteRepository>> ListAsync(CancellationToken ct);
+}

@@ -6,7 +6,7 @@ import { mountApp, workItem } from '@/test/mountApp'
 import DashboardView from '../DashboardView.vue'
 
 vi.mock('@/api/workItems')
-vi.mock('@/api/tokens', () => ({ fetchModels: async () => ({ defaultTier: 'cheap', tiers: [], taskTokenBudget: 0, agentRunner: 'Fake' }) }))
+vi.mock('@/api/tokens', () => ({ fetchModels: async () => ({ defaultTier: 'cheap', tiers: [], taskTokenBudget: 0, agentRunner: 'Fake', unlimited: false }) }))
 vi.mock('@/api/catalog', () => ({
   fetchFlows: async () => ({
     flows: [{ type: 'Bug', name: 'Błąd', version: 1, steps: [] }],
