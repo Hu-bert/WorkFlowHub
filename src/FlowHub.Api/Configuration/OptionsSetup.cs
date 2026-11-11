@@ -14,6 +14,7 @@ public static class OptionsSetup
 
         builder.Services.Configure<BoardOptions>(builder.Configuration.GetSection(BoardOptions.SectionName));
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection(AgentOptions.SectionName));
+        builder.Services.Configure<ModelOptions>(builder.Configuration.GetSection(ModelOptions.SectionName));
         builder.Services.Configure<WorkspaceOptions>(builder.Configuration.GetSection(WorkspaceOptions.SectionName));
 
         // Ścieżki względne w konfiguracji liczymy od katalogu aplikacji, nie od bieżącego katalogu procesu.

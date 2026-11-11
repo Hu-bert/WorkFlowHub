@@ -2,14 +2,16 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { fetchBoard, fetchFlows, fetchRepositories, reloadFlows, reloadRepositories } from '@/api/catalog'
+import { fetchModels, type ModelsInfo } from '@/api/tokens'
 import type { BoardColumn, CodeRepository, FlowDefinition, FlowProblem } from '@/api/types'
 
-/** Dane słownikowe: typy zadań (flow), katalog repo, kolumny tablicy. Wczytywane raz. */
+/** Dane słownikowe: typy zadań (flow), katalog repo, kolumny tablicy, routing modeli. Wczytywane raz. */
 export const useCatalog = defineStore('catalog', () => {
   const flows = ref<FlowDefinition[]>([])
   const flowProblems = ref<FlowProblem[]>([])
   const repositories = ref<CodeRepository[]>([])
   const columns = ref<BoardColumn[]>([])
+  const models = ref<ModelsInfo | null>(null)
   const loaded = ref(false)
 
   const flowNames = computed(() => new Map(flows.value.map((flow) => [flow.type, flow.name])))
@@ -18,15 +20,17 @@ export const useCatalog = defineStore('catalog', () => {
   async function load(force = false) {
     if (loaded.value && !force) return
 
-    const [flowsResponse, repositoryList, board] = await Promise.all([
+    const [flowsResponse, repositoryList, board, modelsInfo] = await Promise.all([
       fetchFlows(),
       fetchRepositories(),
       fetchBoard(),
+      fetchModels(),
     ])
     flows.value = flowsResponse.flows
     flowProblems.value = flowsResponse.problems
     repositories.value = repositoryList
     columns.value = board
+    models.value = modelsInfo
     loaded.value = true
   }
 
@@ -38,5 +42,5 @@ export const useCatalog = defineStore('catalog', () => {
     repositories.value = repositoryList
   }
 
-  return { flows, flowProblems, repositories, columns, loaded, flowName, load, reloadFromDisk }
+  return { flows, flowProblems, repositories, columns, models, loaded, flowName, load, reloadFromDisk }
 })

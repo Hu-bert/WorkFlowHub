@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 
 import type { StepRun } from '@/api/types'
+import BudgetBar from '@/components/BudgetBar.vue'
 import StepList from '@/components/StepList.vue'
 import StepPanel from '@/components/StepPanel.vue'
 import TaskFiles from '@/components/TaskFiles.vue'
@@ -99,6 +100,12 @@ async function moveTo(column: string) {
       color="primary"
       height="6"
       rounded
+    />
+
+    <BudgetBar
+      :used="item.summary.usage.totalTokens"
+      :limit="catalog.models?.taskTokenBudget ?? 0"
+      label="Budżet tokenów zadania"
     />
 
     <div class="layout">

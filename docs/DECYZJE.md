@@ -54,4 +54,15 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 3. Pola frontmattera agentów (`tools`, `model`) — patrz `docs/copilot-cli.md`.
 4. Jeśli `copilot` to skrypt `.cmd` (instalacja przez npm), ustaw w `Agent:CliPath` pełną ścieżkę do `copilot.exe` (instalacja przez winget).
 
+## Faza 5 — tokeny i koszt
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Modele i ceny w `appsettings.json` → `Models` to PRZYKŁADY** (`gpt-5-mini`, `claude-sonnet-4.5`, `claude-opus-4.5`) | Pominęliśmy pytanie o model rozliczeń i listę modeli. **Uzupełnij `Tiers` i `Prices` tym, co ma Twoja firma** — inaczej koszt w raporcie jest orientacyjny. |
+| **Koszt liczymy sami z cennika, gdy agent go nie poda** | Copilot rozlicza „premium requests”, nie dolary za token — koszt w USD to przelicznik do porównywania kroków, nie faktura. |
+| **100% budżetu kroku = krok przerwany ze statusem Błąd** (podnosisz budżet i klikasz „Powtórz”) | Prostsze niż wstrzymywanie sesji w locie; decyzja i tak wraca do Ciebie. Przy 80% — ostrzeżenie w konsoli i żółty pasek. |
+| **Budżet zadania: `Models:TaskTokenBudget`** (jeden dla wszystkich zadań, 0 = bez limitu) | KISS. Po wyczerpaniu kolejne kroki agenta nie startują. |
+| **Sugestia modelu z `plan.md` nie ustawia się sama** — krok „Wybór modelu” to checklista, model zmieniasz w propozycji kroku | Automatyczne parsowanie planu byłoby kruche; Ty i tak zatwierdzasz. |
+| **Wykres trendu jako proste słupki CSS** | Bez biblioteki wykresów — mniej zależności. |
+
 **Nie sprawdzone:** przeciąganie kart prawdziwą myszą (podgląd nie emuluje natywnego drag & drop). Logika upuszczenia i zapis w API są sprawdzone zdarzeniami.
