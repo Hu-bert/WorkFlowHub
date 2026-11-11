@@ -19,7 +19,10 @@ public sealed class TokenBudget(IOptions<ModelOptions> options)
 {
     public const double WarningThreshold = 0.8;
 
-    public long TaskLimit => options.Value.TaskTokenBudget;
+    /// <summary>Plan bez limitu (Copilot Enterprise): budżety są tylko informacją, nic nie zatrzymują.</summary>
+    public bool Unlimited => options.Value.Unlimited;
+
+    public long TaskLimit => Unlimited ? 0 : options.Value.TaskTokenBudget;
 
     public static BudgetState StateOf(long used, long limit)
     {
@@ -36,7 +39,8 @@ public sealed class TokenBudget(IOptions<ModelOptions> options)
         return used >= limit * WarningThreshold ? BudgetState.Warning : BudgetState.Ok;
     }
 
-    public static BudgetState StepState(StepRun step) => StateOf(step.Usage.TotalTokens, step.TokenBudget);
+    public BudgetState StepState(StepRun step) =>
+        Unlimited ? BudgetState.Ok : StateOf(step.Usage.TotalTokens, step.TokenBudget);
 
     public BudgetState TaskState(WorkItem item) => StateOf(item.Usage.TotalTokens, TaskLimit);
 }

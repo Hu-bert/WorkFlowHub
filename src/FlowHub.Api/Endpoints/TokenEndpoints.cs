@@ -6,7 +6,7 @@ namespace FlowHub.Api.Endpoints;
 
 public sealed record ModelTier(string Tier, string Model);
 
-public sealed record ModelsResponse(string DefaultTier, IReadOnlyList<ModelTier> Tiers, long TaskTokenBudget, string AgentRunner);
+public sealed record ModelsResponse(string DefaultTier, IReadOnlyList<ModelTier> Tiers, long TaskTokenBudget, string AgentRunner, bool Unlimited);
 
 public static class TokenEndpoints
 {
@@ -17,8 +17,9 @@ public static class TokenEndpoints
         app.MapGet("/api/models", (IOptions<ModelOptions> models, IOptions<AgentOptions> agent) => new ModelsResponse(
             models.Value.DefaultTier,
             models.Value.Tiers.Select(tier => new ModelTier(tier.Key, tier.Value)).ToList(),
-            models.Value.TaskTokenBudget,
-            agent.Value.Runner));
+            models.Value.Unlimited ? 0 : models.Value.TaskTokenBudget,
+            agent.Value.Runner,
+            models.Value.Unlimited));
 
         return app;
     }

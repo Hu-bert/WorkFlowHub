@@ -34,13 +34,20 @@ public sealed record AgentRequest
 /// <summary>Zdarzenia sesji agenta — wspólne dla Fake, Copilot CLI i (w przyszłości) SDK.</summary>
 public abstract record AgentEvent
 {
+    /// <summary>Id sesji Copilot — pozwala wznowić ją w terminalu (copilot --resume=id).</summary>
+    public sealed record SessionStarted(string SessionId) : AgentEvent;
+
     public sealed record MessageDelta(string Text) : AgentEvent;
 
     public sealed record ToolStarted(string Tool, string? Detail) : AgentEvent;
 
     public sealed record ToolFinished(string Tool, bool Succeeded) : AgentEvent;
 
-    public sealed record Usage(TokenUsage Tokens) : AgentEvent;
+    /// <summary>
+    /// Zużycie tokenów. Final = podsumowanie po zakończeniu sesji (Copilot CLI podaje tokeny dopiero na końcu) —
+    /// wtedy nie ma już czego przerywać, więc przekroczony budżet kończy się ostrzeżeniem, a nie błędem.
+    /// </summary>
+    public sealed record Usage(TokenUsage Tokens, bool Final = false) : AgentEvent;
 
     public sealed record Completed(string Summary) : AgentEvent;
 

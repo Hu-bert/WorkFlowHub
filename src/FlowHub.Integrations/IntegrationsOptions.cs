@@ -11,6 +11,9 @@ public sealed class IntegrationsOptions
     /// <summary>Pull requesty (TFS / Azure DevOps Server).</summary>
     public string PullRequests { get; init; } = IntegrationMode.Fake;
 
+    /// <summary>Lista repozytoriów z serwera kodu (TFS / Azure DevOps Server).</summary>
+    public string RepositoryDirectory { get; init; } = IntegrationMode.Fake;
+
     /// <summary>Serwer CI (TeamCity).</summary>
     public string Ci { get; init; } = IntegrationMode.Fake;
 

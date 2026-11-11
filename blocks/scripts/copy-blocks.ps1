@@ -39,8 +39,9 @@ foreach ($kind in 'agents', 'skills') {
 
         $target = Join-Path $repo $relative
         New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
-        Copy-Item -Path $file.FullName -Destination $target -Force
+        # Najpierw wykluczenie, potem kopia — plik ani przez chwilę nie jest widoczny dla Gita jako nowy.
         Add-Exclude $relative
+        Copy-Item -Path $file.FullName -Destination $target -Force
         $copied++
     }
 }

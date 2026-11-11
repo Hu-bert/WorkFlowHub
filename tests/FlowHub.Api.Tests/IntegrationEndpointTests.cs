@@ -1,3 +1,4 @@
+using FlowHub.Domain;
 using System.Net;
 using FlowHub.Api.Endpoints;
 using FlowHub.Application.Git;
@@ -73,13 +74,15 @@ public sealed class IntegrationEndpointTests(FlowHubApiFactory factory) : IClass
     }
 
     [Fact]
-    public void Unknown_integration_name_fails_at_startup_with_the_list_of_allowed_ones()
+    public void Unknown_integration_name_fails_on_use_with_the_list_of_allowed_ones()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Integrations:Ci"] = "Jenkins" })
             .Build();
 
-        var error = Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddIntegrations(configuration));
+        using var provider = new ServiceCollection().AddIntegrations(configuration).BuildServiceProvider();
+
+        var error = Assert.Throws<DomainException>(() => provider.GetRequiredService<ICiServer>());
 
         Assert.Contains("Integrations:Ci = 'Jenkins'", error.Message);
         Assert.Contains("Fake", error.Message);

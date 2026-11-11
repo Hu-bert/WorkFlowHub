@@ -11,4 +11,5 @@ export const navigation: NavigationItem[] = [
   { label: 'Repozytoria', icon: 'mdi-source-repository', to: '/repos' },
   { label: 'Flow i bloczki', icon: 'mdi-sitemap-outline', to: '/flows' },
   { label: 'Tokeny', icon: 'mdi-chart-line', to: '/tokens' },
+  { label: 'Ustawienia', icon: 'mdi-cog-outline', to: '/settings' },
 ]

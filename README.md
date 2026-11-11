@@ -28,15 +28,16 @@ Bez żadnej konfiguracji aplikacja działa na **atrapach (Fake)**: agent udaje s
 
 ## Co przełączyć w pracy
 
-Wszystko w [src/FlowHub.Api/appsettings.json](src/FlowHub.Api/appsettings.json). Sekrety (tokeny, PAT) — **tylko** przez `dotnet user-secrets` albo zmienne środowiskowe, nigdy w repo.
+Połączenia ustawiasz na stronie **Ustawienia** w aplikacji — zmiany działają od razu, bez restartu. Ustawienia trafiają do `%LOCALAPPDATA%\FlowHub\settings.json`, a tokeny (zaszyfrowane) do `secrets.json` obok — nigdy do repo. Reszta jest w [src/FlowHub.Api/appsettings.json](src/FlowHub.Api/appsettings.json).
 
 | Co | Gdzie | Uwagi |
 |---|---|---|
 | Repozytoria | [repos.yaml](repos.yaml) | Podmień wpisy `demo://` na prawdziwe adresy TFS, build configuration i projekty Octopus. |
-| Agent Copilot | `Agent:Runner` = `CopilotCli`, `Agent:CliPath` | Najpierw `copilot login`. Parser wyjścia CLI nie był testowany na prawdziwym CLI — patrz [docs/DECYZJE.md](docs/DECYZJE.md), Faza 4. |
-| Modele i ceny | `Models:Tiers`, `Models:Prices` | Obecne wartości to przykłady. |
-| Budżet zadania | `Models:TaskTokenBudget` | 0 = bez limitu. |
-| PR / CI / wdrożenia / tracker | `Integrations:*` | Dziś jest tylko `Fake`. Prawdziwą implementację dodajesz jako klasę w `src/FlowHub.Integrations` i rejestrujesz w `DependencyInjection.cs`. |
+| Agent Copilot | Ustawienia → GitHub Copilot CLI | Najpierw `copilot login` w zwykłym terminalu. Sprawdzone na Copilot CLI 1.0.109. |
+| Plan i modele | Ustawienia → Modele i plan Copilot | „Bez limitu” (Enterprise) wyłącza budżety i wycenę. Poziomy domyślnie `auto`. |
+| TFS (pull requesty, lista repo) | Ustawienia → TFS | Adres kolekcji, projekt, token PAT. Klient nie był sprawdzony na prawdziwym serwerze. |
+| Jira | Ustawienia → Jira | Jak wyżej. Stara Jira bez API: zostaw atrapę i wklejaj treść ręcznie. |
+| TeamCity, Octopus | Ustawienia | Na razie tylko zapis adresu i test połączenia; dane z atrapy. |
 | Kolumny kanbana | `Board:Columns` | |
 | Środowisko „gotowe” | `RepoStatus:ReadyEnvironment` | Domyślnie DEV. |
 

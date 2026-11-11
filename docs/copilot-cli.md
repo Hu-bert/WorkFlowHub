@@ -134,3 +134,12 @@ CLI czyta i łączy: `.github/copilot-instructions.md`, `.github/instructions/**
 - Zdarzenia: `AssistantMessageDeltaEvent`, `AssistantMessageEvent`, `ToolExecutionStartEvent`, `ToolExecutionCompleteEvent`, `SessionIdleEvent`, `SessionErrorEvent`.
 - Uprawnienia: `PermissionDecision.ApproveOnce()` / `Reject(feedback)` — **nie** `PermissionHandler.ApproveAll`.
 - Zdarzenie z tokenami (`assistant.usage`) **(?)** — do sprawdzenia w Fazie 4; plan B: `/usage` lub `events.jsonl`.
+
+## Sprawdzone na prawdziwym CLI (1.0.109, 2026-11-11)
+
+- `copilot -p … --output-format json`: każda linia to `{"type": …, "data": {…}}`. Używamy: `session.start` (`sessionId`), `assistant.message_delta` (`deltaContent`), `assistant.message` (`content`; puste przy samym wywołaniu narzędzia), `tool.execution_start` (`toolCallId`, `toolName`, `arguments`), `tool.execution_complete` (`toolCallId`, `success` — bez nazwy narzędzia), `result` (`exitCode`).
+- **Tokenów nie ma w strumieniu.** `--usage-output-file <plik>` zapisuje na końcu JSON z `modelMetrics.<model>.usage` (`inputTokens` łącznie z cache, `outputTokens`, `cacheReadTokens`, `cacheWriteTokens`) i `totalNanoAiu` (10^9 = 1 kredyt AI).
+- W trybie `-p` CLI **nie pyta o zgodę** — narzędzie spoza `--allow-tool` jest odrzucane. `write(<pełna ścieżka>)` pozwala zapisać jeden konkretny plik.
+- `--agent <nazwa>` wczytuje `.github/agents/<nazwa>.agent.md` z katalogu roboczego; lista `tools` we frontmatterze ogranicza narzędzia agenta (bez `edit` agent nie zapisze pliku).
+- Kontynuacja rozmowy: `--resume=<sessionId>` (także w trybie interaktywnym). `--model auto` = wybór Copilota.
+- Instalator Windows kładzie CLI w `%LOCALAPPDATA%\GitHubCopilotCLI\copilot.exe`; FlowHub szuka tam, gdy `copilot` nie ma w PATH.

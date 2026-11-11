@@ -43,6 +43,7 @@ app.MapStepEndpoints();
 app.MapAgentEndpoints();
 app.MapTokenEndpoints();
 app.MapIntegrationEndpoints();
+app.MapSettingsEndpoints();
 app.MapHub<LiveHub>(LiveHub.Route);
 app.MapFallbackToFile("index.html");
 

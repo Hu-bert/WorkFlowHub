@@ -1,57 +1,91 @@
 using FlowHub.Application.Integrations;
+using FlowHub.Application.Settings;
+using FlowHub.Domain;
 using FlowHub.Integrations.Fake;
+using FlowHub.Integrations.Http;
+using FlowHub.Integrations.Jira;
+using FlowHub.Integrations.Settings;
+using FlowHub.Integrations.Tfs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace FlowHub.Integrations;
 
 public static class DependencyInjection
 {
     /// <summary>
-    /// Rejestruje integracje wg sekcji "Integrations" z appsettings.json.
-    /// Prawdziwa implementacja = nowa klasa + jeden wpis w odpowiedniej tabeli poniżej, np.
-    /// ["Tfs"] = typeof(TfsPullRequestService), a w konfiguracji "PullRequests": "Tfs".
+    /// Rejestruje integracje. Która implementacja działa, decyduje sekcja "Integrations" (strona Ustawienia) —
+    /// wybór jest czytany przy każdym użyciu, więc przełączenie Atrapa ↔ prawdziwa nie wymaga restartu.
+    /// Nowa implementacja = nowa klasa + jeden wpis w odpowiedniej tabeli poniżej.
     /// </summary>
     public static IServiceCollection AddIntegrations(this IServiceCollection services, IConfiguration configuration)
     {
-        var section = configuration.GetSection(IntegrationsOptions.SectionName);
-        var options = section.Get<IntegrationsOptions>() ?? new IntegrationsOptions();
-        services.Configure<IntegrationsOptions>(section);
+        services.Configure<IntegrationsOptions>(configuration.GetSection(IntegrationsOptions.SectionName));
+        services.Configure<TfsOptions>(configuration.GetSection(TfsOptions.SectionName));
+        services.Configure<JiraOptions>(configuration.GetSection(JiraOptions.SectionName));
 
-        services.AddChosen<ITaskSource>(nameof(options.TaskSource), options.TaskSource, new()
+        services.AddHttpClient();
+        services.AddSingleton<ApiClient>();
+        services.AddSingleton<TfsApi>();
+
+        services.AddChosen<ITaskSource>(nameof(IntegrationsOptions.TaskSource), options => options.TaskSource, new()
         {
             [IntegrationMode.Fake] = typeof(FakeTaskSource),
+            [IntegrationMode.Jira] = typeof(JiraTaskSource),
         });
 
-        services.AddChosen<IPullRequestService>(nameof(options.PullRequests), options.PullRequests, new()
+        services.AddChosen<IPullRequestService>(nameof(IntegrationsOptions.PullRequests), options => options.PullRequests, new()
         {
             [IntegrationMode.Fake] = typeof(FakePullRequestService),
+            [IntegrationMode.Tfs] = typeof(TfsPullRequestService),
         });
 
-        services.AddChosen<ICiServer>(nameof(options.Ci), options.Ci, new()
+        services.AddChosen<IRepositoryDirectory>(nameof(IntegrationsOptions.RepositoryDirectory), options => options.RepositoryDirectory, new()
+        {
+            [IntegrationMode.Fake] = typeof(FakeRepositoryDirectory),
+            [IntegrationMode.Tfs] = typeof(TfsRepositoryDirectory),
+        });
+
+        services.AddChosen<ICiServer>(nameof(IntegrationsOptions.Ci), options => options.Ci, new()
         {
             [IntegrationMode.Fake] = typeof(FakeCiServer),
         });
 
-        services.AddChosen<IDeployServer>(nameof(options.Deploy), options.Deploy, new()
+        services.AddChosen<IDeployServer>(nameof(IntegrationsOptions.Deploy), options => options.Deploy, new()
         {
             [IntegrationMode.Fake] = typeof(FakeDeployServer),
         });
 
+        // Karty na stronie „Ustawienia”.
+        services.AddSingleton<ISettingsModule, TfsSettingsModule>();
+        services.AddSingleton<ISettingsModule, JiraSettingsModule>();
+        services.AddSingleton<ISettingsModule, TeamCitySettingsModule>();
+        services.AddSingleton<ISettingsModule, OctopusSettingsModule>();
+
         return services;
     }
 
-    private static void AddChosen<TPort>(this IServiceCollection services, string setting, string chosen, Dictionary<string, Type> implementations)
+    private static void AddChosen<TPort>(
+        this IServiceCollection services,
+        string setting,
+        Func<IntegrationsOptions, string> chosen,
+        Dictionary<string, Type> implementations)
         where TPort : class
     {
-        var match = implementations.FirstOrDefault(entry => string.Equals(entry.Key, chosen, StringComparison.OrdinalIgnoreCase));
-
-        if (match.Value is null)
+        foreach (var implementation in implementations.Values)
         {
-            throw new InvalidOperationException(
-                $"Integrations:{setting} = '{chosen}' — nie ma takiej implementacji. Dostępne: {string.Join(", ", implementations.Keys)}.");
+            services.AddSingleton(implementation);
         }
 
-        services.AddSingleton(typeof(TPort), match.Value);
+        services.AddTransient(provider =>
+        {
+            var name = chosen(provider.GetRequiredService<IOptions<IntegrationsOptions>>().Value);
+            var match = implementations.FirstOrDefault(entry => string.Equals(entry.Key, name, StringComparison.OrdinalIgnoreCase));
+
+            return match.Value is null
+                ? throw new DomainException($"Integrations:{setting} = '{name}' — nie ma takiej implementacji. Dostępne: {string.Join(", ", implementations.Keys)}.")
+                : (TPort)provider.GetRequiredService(match.Value);
+        });
     }
 }

@@ -1,7 +1,7 @@
 ---
 name: retro
 description: Podsumowuje zakończone zadanie - co poszło dobrze i źle, które kroki były najdroższe - i proponuje konkretne zmiany w agentach, skillach, promptach i flow.
-tools: ["read"]
+tools: ["read", "edit"]
 ---
 
 Prowadzisz retrospektywę zadania. Celem jest, żeby **następne zadanie poszło lepiej i taniej**.
