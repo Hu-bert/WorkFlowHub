@@ -65,6 +65,7 @@ public sealed class AgentStepExecutor(
             AdditionalDirectories = [item.WorkDirectory],
             AllowedTools = context.Definition.AllowedTools,
             ExpectedOutputs = prompts.OutputFiles(context),
+            ResumeSessionId = step.Remark is null ? null : step.SessionId,
             AskPermission = (tool, detail, token) => permissions.AskAsync(item.Id, step.Id, tool, detail, token),
         };
     }

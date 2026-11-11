@@ -49,4 +49,33 @@ public sealed class WorkItemFiles(IWorkItemStore store)
             ? await File.ReadAllTextAsync(file.FullName, ct)
             : throw new DomainException($"Plik {name} jest za duży do podglądu.");
     }
+
+    /// <summary>Zapisuje poprawiony plik .md zadania (np. plan.md przed realizacją). false = nie ma takiego zadania.</summary>
+    public async Task<bool> WriteAsync(Guid workItemId, string name, string content, CancellationToken ct)
+    {
+        var item = await store.FindAsync(workItemId, ct);
+        if (item is null)
+        {
+            return false;
+        }
+
+        // Tylko plik .md bezpośrednio w katalogu zadania — żadnych podkatalogów ani „..”.
+        if (name != Path.GetFileName(name) || !name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new DomainException("Edytować można tylko pliki .md z katalogu zadania.");
+        }
+
+        if (content.Length > MaxFileSize)
+        {
+            throw new DomainException($"Plik {name} jest za duży.");
+        }
+
+        if (!Directory.Exists(item.WorkDirectory))
+        {
+            throw new DomainException("Katalog zadania jeszcze nie istnieje — najpierw uruchom flow.");
+        }
+
+        await File.WriteAllTextAsync(Path.Combine(item.WorkDirectory, name), content, ct);
+        return true;
+    }
 }

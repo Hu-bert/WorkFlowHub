@@ -22,6 +22,12 @@ public sealed record StepDefinition
     /// <summary>Manual: punkty do odhaczenia.</summary>
     public IReadOnlyList<string> Checklist { get; init; } = [];
 
+    /// <summary>
+    /// Manual: id wcześniejszego kroku Agent, do którego można stąd wysłać polecenie „co dalej”
+    /// (krok agenta rusza ponownie z tą uwagą, a ten krok czeka na jego wynik).
+    /// </summary>
+    public string? FollowUp { get; init; }
+
     /// <summary>Model lub poziom: "tier:cheap", "tier:standard", "tier:premium" albo konkretne id.</summary>
     public string? Model { get; init; }
 

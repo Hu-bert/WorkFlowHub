@@ -54,7 +54,16 @@ const outputs = lines('outputs')
       </div>
     </template>
 
-    <v-textarea v-if="step.kind === 'Manual'" v-model="checklist" label="Checklista (jeden punkt w linii)" rows="3" auto-grow hide-details />
+    <template v-if="step.kind === 'Manual'">
+      <v-textarea v-model="checklist" label="Checklista (jeden punkt w linii)" rows="3" auto-grow hide-details />
+      <v-text-field
+        v-model="step.followUp"
+        label="Co dalej? — id wcześniejszego kroku agenta (opcjonalnie)"
+        hint="Np. implement: z tego kroku można wysłać agentowi polecenie poprawki i wrócić tutaj po wyniku."
+        persistent-hint
+        clearable
+      />
+    </template>
     <v-select v-if="step.kind === 'Check'" v-model="step.check" :items="checks" label="Sprawdzenie" hide-details />
 
     <div class="switches">

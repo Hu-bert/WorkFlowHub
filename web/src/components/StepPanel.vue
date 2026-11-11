@@ -64,6 +64,22 @@ async function approve() {
   await detail.approve(props.step)
 }
 
+/** Krok ręczny „co dalej?”: flow wskazuje krok agenta (followUp), do którego można stąd wysłać polecenie. */
+const followUpTarget = computed(() => {
+  if (props.step.kind !== 'Manual' || !detail.item) return null
+  const steps = catalog.flows.find((flow) => flow.type === detail.item!.summary.type)?.steps ?? []
+  const targetId = steps.find((definition) => definition.id === props.step.stepId)?.followUp
+  return steps.find((definition) => definition.id === targetId) ?? null
+})
+const followUpRepos = computed(() => (followUpTarget.value?.perRepo ? (detail.item?.repos.map((repo) => repo.name) ?? []) : []))
+const followUpText = ref('')
+const followUpRepo = ref<string | null>(null)
+
+async function sendFollowUp() {
+  await detail.followUp(props.step, followUpText.value, followUpRepo.value)
+  followUpText.value = ''
+}
+
 const approveLabel = computed(() => (props.step.kind === 'Manual' ? 'Potwierdzam — zrobione' : 'Zatwierdź i uruchom'))
 </script>
 
@@ -106,6 +122,39 @@ const approveLabel = computed(() => (props.step.kind === 'Manual' ? 'Potwierdzam
       <div v-if="isAgent" class="row">
         <v-combobox v-model="model" :items="modelOptions" label="Model (poziom albo id modelu)" hide-details />
         <v-text-field v-if="!catalog.models?.unlimited" v-model.number="tokenBudget" label="Budżet tokenów (0 = bez limitu)" type="number" min="0" hide-details />
+      </div>
+
+      <div v-if="followUpTarget" class="follow-up">
+        <strong><v-icon icon="mdi-message-reply-text-outline" size="18" /> Coś nie tak? Napisz agentowi, co dalej</strong>
+        <v-textarea
+          v-model="followUpText"
+          :label="`Polecenie dla kroku „${followUpTarget.name}”`"
+          placeholder="Np. test dla soboty nie przechodzi — popraw warunek i dopisz przypadek dla niedzieli."
+          rows="3"
+          auto-grow
+          hide-details
+        />
+        <div class="actions">
+          <v-select
+            v-if="followUpRepos.length > 1"
+            v-model="followUpRepo"
+            :items="[{ title: 'Wszystkie repo', value: null }, ...followUpRepos.map((name) => ({ title: name, value: name }))]"
+            label="Repo"
+            density="compact"
+            hide-details
+            class="repo-select"
+          />
+          <v-btn
+            color="primary"
+            variant="tonal"
+            prepend-icon="mdi-send"
+            :disabled="!followUpText.trim() || detail.busy"
+            @click="sendFollowUp"
+          >
+            Wyślij agentowi i wróć tutaj
+          </v-btn>
+          <span class="fh-muted meta">Agent kontynuuje pracę z tym poleceniem; ten przegląd pojawi się ponownie po wyniku.</span>
+        </div>
       </div>
 
       <div class="actions">
@@ -223,6 +272,20 @@ h2 {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.follow-up {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--fh-border);
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.06);
+}
+
+.repo-select {
+  max-width: 220px;
 }
 
 .pre {

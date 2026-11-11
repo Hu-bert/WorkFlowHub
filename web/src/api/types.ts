@@ -44,6 +44,8 @@ export interface StepDefinition {
   prompt: string | null
   check: string | null
   checklist: string[]
+  /** Manual: id kroku agenta, do którego można stąd wysłać polecenie „co dalej”. */
+  followUp: string | null
   model: string | null
   tokenBudget: number
   requiresApproval: boolean

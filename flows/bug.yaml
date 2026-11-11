@@ -82,6 +82,14 @@ flow:
     inputs: [plan.md, root-cause.md, "context-{repo}.md"]
     outputs: ["summary-{repo}.md"]
 
+  - id: review-implementation
+    name: Przegląd realizacji — co dalej?
+    kind: Manual
+    followUp: implement
+    checklist:
+      - Obejrzałem diff i podsumowanie realizacji
+      - Jeśli coś jest nie tak, wpisuję poniżej polecenie dla agenta (wróci do realizacji)
+      - Gdy wynik jest dobry, potwierdzam i idę dalej
   - id: test
     name: Testowanie
     kind: Script

@@ -128,3 +128,18 @@ Lista rzeczy, które zdecydowałem sam podczas pracy autonomicznej. Każdą moż
 
 **Sprawdzone:** start interaktywnego Copilota w repo zadania, pytanie o zaufanie do folderu, pytanie i odpowiedź modelu, zamknięcie okna kończy proces.
 **Nie sprawdzone:** „Kontynuuj w terminalu” na prawdziwej sesji kroku (mechanizm `--resume` jest w dokumentacji CLI), dłuższa praca z edycją plików w terminalu.
+
+## Faza 11 — edycja plików, krok „co dalej?”, generator bloczków (2026-11-11)
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Pliki `.md` zadania edytujesz w aplikacji** (przycisk „Edytuj” w podglądzie pliku) | Kolejne kroki agenta czytają te pliki z dysku, więc poprawka np. w `plan.md` działa od następnego kroku. Tylko `.md` bezpośrednio w katalogu zadania. |
+| **Nowy krok ręczny „Przegląd realizacji — co dalej?”** zaraz po realizacji (flow Biznesowe, Błąd, Techniczne) | Prośba: po realizacji może „nie być kolorowo”. Wpisujesz polecenie, agent realizacji rusza ponownie, a przegląd wraca po wyniku — w pętli, aż potwierdzisz. |
+| **Mechanizm jest ogólny: `followUp: <id kroku agenta>` na kroku Manual** | Da się go użyć po dowolnym kroku agenta (edytor flow ma na to pole), bez zmian w silniku. |
+| **Polecenie „co dalej” uruchamia agenta bez drugiego zatwierdzania**; kroki między nim a przeglądem (np. testy) idą jeszcze raz | Sam to przed chwilą zleciłeś. Zgoda na `write`/`shell` w UI dalej obowiązuje. |
+| **Powtórka kroku z uwagą kontynuuje tę samą sesję Copilota** (`--resume=<id>`) | Agent pamięta, co zrobił, więc poprawka jest tańsza i trafniejsza. Sprawdzone na prawdziwym CLI. |
+| **Generator bloczków** (Flow i bloczki → Bloczki → „Generuj nowy bloczek”): opis oczekiwań + wzorzec tego samego rodzaju → szkic w edytorze | Prosty: jedno pole opisu. Agent nie dostaje narzędzi i pracuje w pustym katalogu. Zapis dopiero po Twoim „Zapisz” (zasada: zmiany w `blocks/` zawsze jako szkic). |
+| **Na atrapie generator zwraca oznaczoną kopię wzorca** | Żeby obieg dało się obejrzeć bez Copilota; treść pisze model dopiero po włączeniu Copilot CLI. |
+
+**Sprawdzone:** pętla „co dalej” w aplikacji (na atrapie agenta), edycja `plan.md` w UI, generator skilla prawdziwym Copilotem (17 s), `--resume` w trybie `-p`.
+**Nie sprawdzone:** pętla „co dalej” z prawdziwym agentem realizacji zmieniającym kod. Tokeny zużyte przez generator nie trafiają do raportu (nie należą do żadnego zadania).

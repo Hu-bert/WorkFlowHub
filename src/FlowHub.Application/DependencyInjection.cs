@@ -1,4 +1,5 @@
 using FlowHub.Application.Agents;
+using FlowHub.Application.Blocks;
 using FlowHub.Application.Engine;
 using FlowHub.Application.Engine.Scripts;
 using FlowHub.Application.Flows;
@@ -22,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<WorkItemService>();
         services.AddScoped<WorkItemFiles>();
         services.AddScoped<TerminalService>();
+        services.AddScoped<BlockGenerator>();
         services.AddScoped<TokenReportService>();
         services.AddSingleton<SettingsService>();
         services.AddSingleton<ISettingsModule, ModelsSettingsModule>();

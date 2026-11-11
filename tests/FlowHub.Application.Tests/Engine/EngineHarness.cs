@@ -17,6 +17,7 @@ internal sealed class EngineHarness
     public StepQueue Queue { get; } = new();
     public FakeExecutor Scripts { get; } = new(StepKind.Script);
     public FakeExecutor Manual { get; } = new(StepKind.Manual);
+    public FakeExecutor Agents { get; } = new(StepKind.Agent);
     public StepService Service { get; }
     public WorkItem Item { get; }
 
@@ -29,10 +30,10 @@ internal sealed class EngineHarness
         var flows = new FlowCatalog(flowStore, NullLogger<FlowCatalog>.Instance);
 
         var contexts = new StepContextFactory(flows);
-        var executors = new StepExecutorRegistry([Scripts, Manual]);
+        var executors = new StepExecutorRegistry([Scripts, Manual, Agents]);
         var advancer = new FlowAdvancer(Store, contexts, executors, Queue, Live);
 
-        Service = new StepService(Store, advancer, Queue);
+        Service = new StepService(Store, advancer, Queue, contexts);
         _runner = new StepRunner(Store, contexts, executors, advancer, Live, TimeProvider.System, NullLogger<StepRunner>.Instance);
 
         Item = WorkItem.Create(
@@ -45,7 +46,7 @@ internal sealed class EngineHarness
     public static StepDocument Script(string id, bool approval = true) =>
         new() { Id = id, Kind = "Script", Script = "x.ps1", RequiresApproval = approval };
 
-    public static StepDocument ManualStep(string id) => new() { Id = id, Kind = "Manual" };
+    public static StepDocument ManualStep(string id, string? followUp = null) => new() { Id = id, Kind = "Manual", FollowUp = followUp };
 
     public static StepDocument Agent(string id) => new() { Id = id, Kind = "Agent", Agent = "a" };
 

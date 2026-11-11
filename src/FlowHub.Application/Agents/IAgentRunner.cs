@@ -28,6 +28,9 @@ public sealed record AgentRequest
     /// <summary>Pliki, które agent ma utworzyć (pełne ścieżki).</summary>
     public IReadOnlyList<string> ExpectedOutputs { get; init; } = [];
 
+    /// <summary>Id wcześniejszej sesji tego kroku — powtórka z uwagą kontynuuje tę samą rozmowę (agent pamięta, co zrobił).</summary>
+    public string? ResumeSessionId { get; init; }
+
     public required AskPermission AskPermission { get; init; }
 }
 
