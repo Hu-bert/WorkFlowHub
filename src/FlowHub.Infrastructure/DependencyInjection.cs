@@ -1,4 +1,6 @@
+using FlowHub.Application.Engine.Scripts;
 using FlowHub.Application.Flows;
+using FlowHub.Infrastructure.Scripts;
 using FlowHub.Application.Repositories;
 using FlowHub.Application.WorkItems;
 using FlowHub.Infrastructure.Persistence;
@@ -21,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkItemStore, EfWorkItemStore>();
         services.AddSingleton<IFlowStore, YamlFlowStore>();
         services.AddSingleton<IRepositoryCatalog, YamlRepositoryCatalog>();
+        services.AddSingleton<IScriptRunner, PowerShellScriptRunner>();
 
         return services;
     }

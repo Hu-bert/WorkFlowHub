@@ -1,7 +1,10 @@
+using System.Text.Json.Serialization;
 using FlowHub.Api.Configuration;
 using FlowHub.Api.Endpoints;
+using FlowHub.Api.Hosting;
 using FlowHub.Api.Hubs;
 using FlowHub.Application;
+using FlowHub.Application.Engine;
 using FlowHub.Infrastructure;
 using FlowHub.Infrastructure.Persistence;
 using FlowHub.Integrations;
@@ -18,7 +21,10 @@ builder.Services
     .AddIntegrations(builder.Configuration)
     .AddExceptionHandler<DomainExceptionHandler>()
     .AddProblemDetails()
-    .AddSignalR();
+    .AddSingleton<ILiveNotifier, SignalRLiveNotifier>()
+    .AddHostedService<StepWorker>()
+    .AddSignalR()
+    .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 var app = builder.Build();
 
@@ -32,6 +38,7 @@ app.MapHealthEndpoints();
 app.MapFlowEndpoints();
 app.MapRepositoryEndpoints();
 app.MapWorkItemEndpoints();
+app.MapStepEndpoints();
 app.MapHub<LiveHub>(LiveHub.Route);
 app.MapFallbackToFile("index.html");
 

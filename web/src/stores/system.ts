@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { fetchHealth } from '@/api/health'
-import { createLiveConnection } from '@/api/live'
+import { liveConnection } from '@/api/live'
 import type { ConnectionState } from '@/shared/connectionState'
 
 /** Stan połączeń aplikacji z backendem (REST + SignalR). */
@@ -20,7 +20,7 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   async function connectLive() {
-    const connection = createLiveConnection()
+    const connection = liveConnection()
     connection.onreconnecting(() => (live.value = 'checking'))
     connection.onreconnected(() => (live.value = 'online'))
     connection.onclose(() => (live.value = 'offline'))
