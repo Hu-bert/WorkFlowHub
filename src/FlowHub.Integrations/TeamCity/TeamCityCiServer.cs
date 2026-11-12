@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using FlowHub.Application.Integrations;
 using FlowHub.Application.Settings;
+using FlowHub.Domain;
 using FlowHub.Domain.Repositories;
 using FlowHub.Integrations.Http;
 using Microsoft.Extensions.Options;
@@ -91,14 +92,38 @@ public sealed class TeamCityCiServer(ApiClient client, IOptions<TeamCityOptions>
     }
 
     /// <summary>
-    /// Najnowszy build konfiguracji na branchu — także trwający lub w kolejce (state:any, running:any).
-    /// defaultFilter:false, bo domyślny filtr zwraca tylko buildy z brancha domyślnego.
+    /// Najnowszy build konfiguracji na branchu. Różne wersje TeamCity różnie traktują filtry (prawdziwy serwer
+    /// odrzucił kodem 400 połączenie state:any z running:any), więc próbujemy od najpełniejszego do najprostszego.
     /// </summary>
-    private Task<JsonDocument?> LatestBuildAsync(string configuration, string branch, CancellationToken ct)
+    private async Task<JsonDocument?> LatestBuildAsync(string configuration, string branch, CancellationToken ct)
     {
-        var locator = $"buildType:(id:{configuration}),branch:(name:{branch}),state:any,running:any,defaultFilter:false,count:1";
-        return GetAsync($"builds?locator={Uri.EscapeDataString(locator)}&fields={BuildFields}", ct);
+        DomainException? rejected = null;
+
+        foreach (var locator in BuildLocators(configuration, branch))
+        {
+            try
+            {
+                return await GetAsync($"builds?locator={Uri.EscapeDataString(locator)}&fields={BuildFields}", ct);
+            }
+            catch (DomainException error) when (error.Message.Contains(" 400 "))
+            {
+                rejected = error;
+            }
+        }
+
+        throw rejected!;
     }
+
+    /// <summary>
+    /// 1) także buildy trwające i w kolejce; 2) bez filtra stanu (defaultFilter:false i tak nie odcina trwających);
+    /// 3) najprostszy: sama nazwa brancha tak, jak pokazuje ją TeamCity.
+    /// </summary>
+    public static IReadOnlyList<string> BuildLocators(string configuration, string branch) =>
+    [
+        $"defaultFilter:false,buildType:(id:{configuration}),branch:(name:{branch}),state:any,count:1",
+        $"defaultFilter:false,buildType:(id:{configuration}),branch:(name:{branch}),count:1",
+        $"buildType:(id:{configuration}),branch:{branch},count:1",
+    ];
 
     private async Task<IReadOnlyList<string>> FailedTestsAsync(string buildId, CancellationToken ct)
     {

@@ -53,7 +53,9 @@ public sealed class ApiClient(IHttpClientFactory factory)
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new DomainException($"{Host(url)} odpowiedział {(int)response.StatusCode} {response.ReasonPhrase} ({Explain(response.StatusCode)}).");
+            var details = Summarize(await response.Content.ReadAsStringAsync(ct));
+            throw new DomainException(
+                $"{Host(url)} odpowiedział {(int)response.StatusCode} {response.ReasonPhrase} ({Explain(response.StatusCode)}).{(details.Length == 0 ? "" : $" Serwer: {details}")}");
         }
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
@@ -88,10 +90,25 @@ public sealed class ApiClient(IHttpClientFactory factory)
 
     private static string Host(string url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : url;
 
+    /// <summary>
+    /// Początek odpowiedzi błędu, bez znaczników HTML — serwery (np. TeamCity) piszą w niej, co dokładnie
+    /// im się nie podoba w zapytaniu. To treść od serwera, nie nasze dane: nie ma w niej tokenu.
+    /// </summary>
+    public static string Summarize(string body)
+    {
+        var text = System.Text.RegularExpressions.Regex.Replace(body, "<[^>]+>", " ");
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+
+        return text.Length <= MaxErrorDetails ? text : text[..MaxErrorDetails] + "…";
+    }
+
+    private const int MaxErrorDetails = 400;
+
     private static string Explain(HttpStatusCode status) => status switch
     {
         HttpStatusCode.Unauthorized => "zły albo wygasły token",
         HttpStatusCode.Forbidden => "token nie ma uprawnień",
+        HttpStatusCode.BadRequest => "serwer nie rozumie zapytania",
         _ => "sprawdź adres i ustawienia",
     };
 }
