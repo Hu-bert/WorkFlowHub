@@ -45,6 +45,15 @@ public sealed class GitCliService : IGitService
             Lines(status).Length);
     }
 
+    public async Task CloneAsync(string url, string targetPath, CancellationToken ct)
+    {
+        var parent = Path.GetDirectoryName(targetPath) ?? throw new DomainException("Nieprawidłowy katalog docelowy.");
+        Directory.CreateDirectory(parent);
+
+        // Bez okna logowania: gdy Git nie ma zapamiętanych danych do serwera, klon kończy się błędem zamiast zawiesić aplikację.
+        await RunAsync(parent, ct, "-c", "credential.interactive=never", "clone", "--", url, targetPath);
+    }
+
     private const char FieldSeparator = '\u001f';
 
     private static GitCommit? ParseCommit(string line)

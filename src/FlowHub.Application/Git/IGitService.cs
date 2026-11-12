@@ -14,4 +14,7 @@ public interface IGitService
     Task<RepoDiff> DiffAsync(string repo, string repositoryPath, string baseBranch, CancellationToken ct);
 
     Task<GitWorkingCopy> DescribeAsync(string repositoryPath, CancellationToken ct);
+
+    /// <summary>git clone do wskazanego (jeszcze nieistniejącego) katalogu. Logowanie do serwera robi Git (credential manager).</summary>
+    Task CloneAsync(string url, string targetPath, CancellationToken ct);
 }

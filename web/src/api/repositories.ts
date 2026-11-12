@@ -112,3 +112,7 @@ export interface RepoMap {
 export const fetchRepoMap = (name: string) => getJson<RepoMap>(`${repo(name)}/map`)
 export const saveRepoMap = (name: string, content: string) => putJson<RepoMap>(`${repo(name)}/map`, { content })
 export const deleteRepoMap = (name: string) => deleteJson<void>(`${repo(name)}/map`)
+
+/** Klonuje repo z katalogu do folderu na dysku ({directory}\{nazwa repo}); puste = folder repozytoriów z Ustawień. */
+export const cloneRepository = (name: string, directory: string | null) =>
+  postJson<{ path: string }>(`${repo(name)}/clone`, { directory })

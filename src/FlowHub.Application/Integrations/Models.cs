@@ -78,7 +78,11 @@ public enum DeploymentState
     Failed,
 }
 
-public sealed record EnvironmentDeployment(string Environment, string? Version, DeploymentState State, DateTime? At, string? Url);
+/// <summary>
+/// Co jest teraz wdrożone na środowisku. FromBranch = to wersja zbudowana z brancha, o który pytamy
+/// (false = na środowisku jest inna wersja — pokazujemy ją do porównania, ale nie liczymy jako „moje wdrożenie”).
+/// </summary>
+public sealed record EnvironmentDeployment(string Environment, string? Version, DeploymentState State, DateTime? At, string? Url, bool FromBranch = true);
 
 /// <summary>Która wersja zawiera zmiany i na których środowiskach jest wdrożona.</summary>
 public sealed record DeploymentOverview(string Project, string? Release, IReadOnlyList<EnvironmentDeployment> Environments);

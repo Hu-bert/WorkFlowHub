@@ -32,7 +32,7 @@ const snackbarOpen = computed({
 
 <style scoped>
 .content {
-  padding: 2rem 2.5rem;
+  padding: 1.25rem 1.75rem;
 }
 
 @media (max-width: 800px) {

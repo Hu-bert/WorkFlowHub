@@ -92,19 +92,39 @@ public sealed class CompanySystemsTests(FlowHubApiFactory factory) : IClassFixtu
         """;
 
     [Fact]
-    public void Octopus_shows_the_release_built_from_the_branch_and_where_it_is_deployed()
+    public void Octopus_shows_what_is_deployed_on_every_environment_and_marks_the_version_from_the_branch()
     {
         using var progression = JsonDocument.Parse(Progression);
 
-        var overview = OctopusMapper.Overview(progression.RootElement, "Kcf", "ZR-3925-2", [], isDefaultBranch: false, "https://octo/app#/Spaces-1/projects/kcf");
+        var mine = OctopusMapper.Overview(progression.RootElement, "Kcf", "ZR-3925-2", [], isDefaultBranch: false, "https://octo/app#/Spaces-1/projects/kcf");
+        var other = OctopusMapper.Overview(progression.RootElement, "Kcf", "ZR-9999", [], isDefaultBranch: false, "p");
 
-        Assert.Equal("1.30.0", overview.Release);
-        Assert.Equal(["DEV", "TEST"], overview.Environments.Select(environment => environment.Environment));
-        Assert.Equal((DeploymentState.Executing, "1.30.0"), (overview.Environments[0].State, overview.Environments[0].Version));
-        Assert.EndsWith("/deployments/releases/1.30.0/deployments/Deployments-81", overview.Environments[0].Url);
-        Assert.Equal(DeploymentState.None, overview.Environments[1].State);
+        // Na DEV aktualny jest wpis IsCurrent: release 1.31.0 (nowszy) oraz trwające wdrożenie 1.30.0 — pierwszy z oznaczonych.
+        Assert.Equal("1.30.0", mine.Release);
+        Assert.Equal(["DEV", "TEST"], mine.Environments.Select(environment => environment.Environment));
+        Assert.Equal("1.31.0", mine.Environments[0].Version);
+        Assert.False(mine.Environments[0].FromBranch); // na DEV jest cudza wersja — do porównania
+        Assert.Equal(DeploymentState.None, mine.Environments[1].State);
+
+        Assert.Null(other.Release);
+        Assert.Equal("1.31.0", other.Environments[0].Version); // wersję na środowisku widać także bez własnego release
+        Assert.False(other.Environments[0].FromBranch);
     }
 
+    [Fact]
+    public void Octopus_marks_the_environment_where_the_branch_version_is_current()
+    {
+        using var progression = JsonDocument.Parse("""
+            { "Environments": [ { "Id": "Environments-1", "Name": "VDEV2" } ],
+              "Releases": [ { "Release": { "Id": "Releases-8", "Version": "1.30.0", "BuildInformation": [ { "Branch": "ZR-3925-2" } ] },
+                "Deployments": { "Environments-1": [ { "State": "Success", "ReleaseVersion": "1.30.0", "DeploymentId": "Deployments-81", "IsCurrent": true } ] } } ] }
+            """);
+
+        var environment = Assert.Single(OctopusMapper.Overview(progression.RootElement, "Kcf", "ZR-3925-2", [], false, "https://octo/app#/Spaces-1/projects/kcf").Environments);
+
+        Assert.Equal(("1.30.0", DeploymentState.Success, true), (environment.Version, environment.State, environment.FromBranch));
+        Assert.EndsWith("/deployments/releases/1.30.0/deployments/Deployments-81", environment.Url);
+    }
     [Fact]
     public void Octopus_release_can_be_matched_by_the_version_in_the_build_number()
     {
@@ -125,7 +145,7 @@ public sealed class CompanySystemsTests(FlowHubApiFactory factory) : IClassFixtu
         var master = OctopusMapper.Overview(progression.RootElement, "Kcf", "master", [], isDefaultBranch: true, "p");
 
         Assert.Null(feature.Release);
-        Assert.All(feature.Environments, environment => Assert.Equal(DeploymentState.None, environment.State));
+        Assert.All(feature.Environments, environment => Assert.False(environment.FromBranch));
         Assert.Equal("1.31.0", master.Release);
     }
 

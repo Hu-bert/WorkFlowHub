@@ -5,6 +5,7 @@ using FlowHub.Integrations.Jira;
 using FlowHub.Integrations.Octopus;
 using FlowHub.Integrations.TeamCity;
 using FlowHub.Integrations.Tfs;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace FlowHub.Integrations.Settings;
@@ -103,7 +104,7 @@ public sealed class TeamCitySettingsModule(TeamCityCiServer teamCity) : ISetting
             : new ConnectionTest(false, "Serwer nie zna adresu /app/rest/server — sprawdź adres TeamCity.");
 }
 
-public sealed class OctopusSettingsModule(OctopusDeployServer octopus) : ISettingsModule
+public sealed class OctopusSettingsModule(OctopusDeployServer octopus, IServiceProvider services) : ISettingsModule
 {
     public string Id => "octopus";
     public string Title => "Octopus Deploy / środowiska";
@@ -121,8 +122,8 @@ public sealed class OctopusSettingsModule(OctopusDeployServer octopus) : ISettin
         new("Octopus:BaseUrl", "Adres Octopus", Hint: "Np. https://octopus.firma.pl — używany też do linków „przejdź do Octopus”."),
         new("Octopus:Space", "Przestrzeń (Space)", Hint: "Id przestrzeni, np. Spaces-1. Puste = przestrzeń domyślna."),
         new(OctopusOptions.ApiKeyKey, "Klucz API", SettingKind.Secret),
-        new("RepoStatus:ReadyEnvironment", "Środowisko domyślne", Hint: "Od niego repo liczy się jako „gotowe” (np. DEV albo DEV2). Nazwa dokładnie jak w Octopus."),
-        new("RepoStatus:Environments", "Pokazywane środowiska", Hint: "Po przecinku, np. DEV, TEST. Puste = wszystkie. „Sprawdź połączenie” wypisze nazwy z serwera."),
+        new("RepoStatus:ReadyEnvironment", "Środowisko domyślne", Hint: "Od niego repo liczy się jako „gotowe”. Lista pochodzi z serwera wdrożeń.", Suggest: true),
+        new("RepoStatus:Environments", "Pokazywane środowiska", Hint: "Wybierz z listy z serwera. Puste = wszystkie.", Suggest: true, Multiple: true),
     ];
 
     public async Task<ConnectionTest> TestAsync(CancellationToken ct)
@@ -135,4 +136,8 @@ public sealed class OctopusSettingsModule(OctopusDeployServer octopus) : ISettin
         var environments = await octopus.ListEnvironmentsAsync(ct);
         return new ConnectionTest(true, $"Połączono jako {user}. Środowiska: {(environments.Count == 0 ? "brak" : string.Join(", ", environments))}.");
     }
+
+    /// <summary>Środowiska z aktualnie wybranego źródła wdrożeń (atrapa albo Octopus).</summary>
+    public Task<IReadOnlyList<string>> SuggestAsync(string key, CancellationToken ct) =>
+        services.GetRequiredService<IDeployServer>().ListEnvironmentsAsync(ct);
 }

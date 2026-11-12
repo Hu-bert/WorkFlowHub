@@ -156,6 +156,26 @@ public sealed class LocalRepositoryTests(FlowHubApiFactory factory) : IClassFixt
         Assert.Throws<DomainException>(() => catalog.Save(new CodeRepository { Name = "Bez adresu", Url = " " }, null));
     }
 
+    [Fact]
+    public async Task Catalog_repo_can_be_cloned_into_a_chosen_folder_and_shows_up_in_the_scan()
+    {
+        var origin = CreateRepository(Path.Combine("..", "serwer", "Orders.Service"), "main", null, "Start");
+        var catalog = Catalog("repositories: []\n");
+        var repository = catalog.Save(new CodeRepository { Name = "Orders.Service", Url = new Uri(origin).AbsoluteUri }, null);
+        var target = Path.Combine(_root, "tfs", "ZR-1");
+        var scanner = Scanner(Path.Combine(_root, "tfs"), catalog);
+        Directory.CreateDirectory(Path.Combine(_root, "tfs"));
+        await scanner.ScanAsync(Ct);
+
+        var path = await scanner.CloneAsync(repository, target, Ct);
+        var scan = await scanner.ScanAsync(Ct);
+
+        Assert.Equal(Path.Combine(target, "Orders.Service"), path);
+        Assert.True(File.Exists(Path.Combine(path, "README.md")));
+        Assert.Contains(scan.Repositories, local => local.Folder == Path.Combine("ZR-1", "Orders.Service")); // bez „Odśwież”
+        await Assert.ThrowsAsync<DomainException>(() => scanner.CloneAsync(repository, target, Ct)); // katalog już istnieje
+    }
+
     [Theory]
     [InlineData("https://tfs.firma.pl/tfs/Col/Projekt/_git/Billing.Api", "Billing.Api")]
     [InlineData("git@github.com:firma/shared-lib.git", "shared-lib")]

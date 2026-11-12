@@ -14,6 +14,10 @@ public sealed record AddLocalRepositoryRequest(string Path);
 
 public sealed record RepoMapContent(string Content);
 
+public sealed record CloneRequest(string? Directory);
+
+public sealed record CloneResult(string Path);
+
 /// <summary>Wynik diagnostyki: zapytania do serwerów i to, co z nich wyszło.</summary>
 public sealed record Diagnosis(IReadOnlyList<ApiCall> Calls, string? Error, string? PullRequest, string? Build, string? Release);
 
@@ -85,6 +89,12 @@ public static class RepositoryEndpoints
 
             return catalog.Find(remote.Name) ?? catalog.Save(new CodeRepository { Name = remote.Name, Url = remote.Url, DefaultBranch = remote.DefaultBranch }, null);
         });
+
+        // Klonowanie repo z katalogu do wybranego folderu na dysku.
+        group.MapPost("/{name}/clone", async (string name, CloneRequest request, IRepositoryCatalog catalog, LocalRepositoryService local, CancellationToken ct) =>
+            catalog.Find(name) is { } repository
+                ? Results.Ok(new CloneResult(await local.CloneAsync(repository, request.Directory, ct)))
+                : Results.NotFound());
 
         // Mapa repo: zapamiętany wynik analizy technologicznej, używany ponownie w kolejnych zadaniach.
         group.MapGet("/{name}/map", (string name, RepoMapStore maps) => maps.Find(name) is { } map ? Results.Ok(map) : Results.NotFound());

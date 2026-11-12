@@ -101,6 +101,8 @@ public sealed class YamlRepositoryCatalog(WorkspacePaths paths, ILogger<YamlRepo
     }
     private List<CodeRepository> Load()
     {
+        SeedIfMissing();
+
         if (!File.Exists(paths.RepositoriesFile))
         {
             logger.LogWarning("Brak katalogu repo: {File}", paths.RepositoriesFile);
@@ -117,6 +119,20 @@ public sealed class YamlRepositoryCatalog(WorkspacePaths paths, ILogger<YamlRepo
             logger.LogError("repos.yaml: {Error}", YamlFormat.Describe(error));
             return [];
         }
+    }
+
+    /// <summary>Pierwsze uruchomienie: katalog użytkownika startuje od pliku z repozytorium FlowHub (także wcześniej edytowanego).</summary>
+    private void SeedIfMissing()
+    {
+        if (File.Exists(paths.RepositoriesFile) || !File.Exists(paths.SeedRepositoriesFile)
+            || string.Equals(paths.RepositoriesFile, paths.SeedRepositoriesFile, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(paths.RepositoriesFile)!);
+        File.Copy(paths.SeedRepositoriesFile, paths.RepositoriesFile);
+        logger.LogInformation("Katalog repo skopiowany do {File}", paths.RepositoriesFile);
     }
 
     private bool IsComplete(RepositoryEntry entry)

@@ -9,19 +9,19 @@ import { useLocalRepositories } from '@/stores/localRepositories'
 import { useNotifications } from '@/stores/notifications'
 
 import DiagnosisDialog from './DiagnosisDialog.vue'
-import HealthCell from './HealthCell.vue'
-import SystemLinks from './SystemLinks.vue'
+import RepoDetails, { type RepoDetailsTab } from './RepoDetails.vue'
 
 /**
  * Lokalne kopie repozytoriów jako drzewo — tak jak leżą na dysku: folder (np. branch albo zadanie), a w nim repo.
- * Przy każdym repo: branch, ostatni commit, PR, build, release i środowiska oraz skróty do TFS / TeamCity / Octopus.
+ * Wiersz jest zwarty: PR, build i wersje na środowiskach. Kliknięcie w PR / build / środowisko rozwija szczegóły
+ * od razu na właściwej zakładce.
  */
 const catalog = useCatalog()
 const local = useLocalRepositories()
 const notifications = useNotifications()
 
 const collapsed = ref<Set<string>>(new Set())
-const expanded = ref<string | null>(null)
+const opened = ref<{ path: string; tab: RepoDetailsTab } | null>(null)
 const diagnosed = ref<{ name: string; branch: string } | null>(null)
 
 interface Folder {
@@ -42,18 +42,25 @@ const folders = computed<Folder[]>(() => {
 })
 
 const statusOf = (repository: LocalRepository) => local.statuses[repository.path]?.status ?? null
+const levelOf = (repository: LocalRepository) => statusOf(repository)?.level ?? 'Unknown'
 
 /** Najgorszy poziom w folderze — widać z daleka, w którym folderze coś wymaga uwagi. */
 function folderLevel(folder: Folder) {
   const order = ['Ok', 'Unknown', 'Pending', 'Warning', 'Failed'] as const
-  const levels = folder.repositories.map((repository) => statusOf(repository)?.level ?? 'Unknown')
-  return levels.reduce((worst, level) => (order.indexOf(level) > order.indexOf(worst) ? level : worst), 'Ok' as (typeof order)[number])
+  return folder.repositories.map(levelOf).reduce((worst, level) => (order.indexOf(level) > order.indexOf(worst) ? level : worst), 'Ok' as (typeof order)[number])
 }
 
-function toggle(folder: string) {
+function toggleFolder(folder: string) {
   const next = new Set(collapsed.value)
   if (!next.delete(folder)) next.add(folder)
   collapsed.value = next
+}
+
+/** Klik w wiersz zwija / rozwija; klik w komórkę (PR, build, środowisko) otwiera od razu jej zakładkę. */
+function open(repository: LocalRepository, tab?: RepoDetailsTab) {
+  const same = opened.value?.path === repository.path
+  if (same && (!tab || opened.value?.tab === tab)) opened.value = null
+  else opened.value = { path: repository.path, tab: tab ?? (same ? opened.value!.tab : statusOf(repository) ? 'pr' : 'commits') }
 }
 
 async function addToCatalog(repository: LocalRepository) {
@@ -76,11 +83,11 @@ onMounted(() => local.load())
   <div class="local">
     <div class="toolbar">
       <div class="root">
-        <v-icon icon="mdi-folder-open-outline" />
+        <v-icon icon="mdi-folder-open-outline" size="20" />
         <code v-if="local.scan?.root">{{ local.scan.root }}</code>
-        <span v-if="local.scan?.scannedAt" class="fh-muted">· sprawdzono {{ formatDateTime(local.scan.scannedAt) }}</span>
+        <span v-if="local.scan?.scannedAt" class="fh-muted">sprawdzono {{ formatDateTime(local.scan.scannedAt) }}</span>
       </div>
-      <v-btn variant="tonal" color="primary" prepend-icon="mdi-refresh" :loading="local.loading" @click="local.load(true)">Odśwież teraz</v-btn>
+      <v-btn variant="tonal" color="primary" size="small" prepend-icon="mdi-refresh" :loading="local.loading" @click="local.load(true)">Odśwież teraz</v-btn>
     </div>
 
     <v-card v-if="local.scan && !local.scan.root" class="empty fh-muted">
@@ -91,94 +98,109 @@ onMounted(() => local.load())
     <v-progress-linear v-else-if="!local.scan" indeterminate color="primary" />
 
     <div v-for="folder in folders" :key="folder.name" class="folder">
-      <button v-if="folder.name" type="button" class="folder-head" @click="toggle(folder.name)">
-        <v-icon :icon="collapsed.has(folder.name) ? 'mdi-chevron-right' : 'mdi-chevron-down'" />
-        <v-icon :icon="collapsed.has(folder.name) ? 'mdi-folder-outline' : 'mdi-folder-open-outline'" color="primary" />
+      <button v-if="folder.name" type="button" class="folder-head" @click="toggleFolder(folder.name)">
+        <v-icon :icon="collapsed.has(folder.name) ? 'mdi-chevron-right' : 'mdi-chevron-down'" size="20" />
+        <v-icon :icon="collapsed.has(folder.name) ? 'mdi-folder-outline' : 'mdi-folder-open-outline'" color="primary" size="20" />
         <strong>{{ folder.name }}</strong>
         <span class="fh-muted">{{ folder.repositories.length }} repo</span>
-        <v-icon :icon="healthPresentation[folderLevel(folder)].icon" :color="healthPresentation[folderLevel(folder)].color" size="18" />
+        <v-icon :icon="healthPresentation[folderLevel(folder)].icon" :color="healthPresentation[folderLevel(folder)].color" size="16" />
       </button>
 
       <div v-if="!folder.name || !collapsed.has(folder.name)" :class="{ children: !!folder.name }">
-        <v-card v-for="repository in folder.repositories" :key="repository.path" class="repo">
-          <div class="row" @click="expanded = expanded === repository.path ? null : repository.path">
+        <v-card v-for="repository in folder.repositories" :key="repository.path" class="repo" :class="{ open: opened?.path === repository.path }">
+          <div class="row" @click="open(repository)">
             <div class="identity">
               <div class="name">
-                <v-icon
-                  :icon="healthPresentation[statusOf(repository)?.level ?? 'Unknown'].icon"
-                  :color="healthPresentation[statusOf(repository)?.level ?? 'Unknown'].color"
-                />
-                {{ repository.name }}
+                <v-icon :icon="healthPresentation[levelOf(repository)].icon" :color="healthPresentation[levelOf(repository)].color" size="20" />
+                <span>{{ repository.name }}</span>
               </div>
-              <div class="branch">
-                <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-source-branch">{{ repository.branch }}</v-chip>
-                <v-chip v-if="repository.uncommittedFiles" size="small" color="warning" variant="tonal">
-                  {{ repository.uncommittedFiles }} niezacommitowanych
+              <div class="sub">
+                <v-chip size="x-small" variant="tonal" color="primary" prepend-icon="mdi-source-branch">{{ repository.branch }}</v-chip>
+                <v-chip v-if="repository.uncommittedFiles" size="x-small" color="warning" variant="tonal" title="Niezacommitowane pliki">
+                  {{ repository.uncommittedFiles }} zmian
                 </v-chip>
-              </div>
-              <div v-if="repository.recentCommits[0]" class="commit fh-muted">
-                {{ repository.recentCommits[0].subject }} — {{ repository.recentCommits[0].author }}, {{ formatDateTime(repository.recentCommits[0].date) }}
               </div>
             </div>
 
-            <div v-if="statusOf(repository)" class="cells">
-              <div class="cell"><span class="label">PR</span><HealthCell :cell="statusOf(repository)!.pullRequest" /></div>
-              <div class="cell"><span class="label">Build</span><HealthCell :cell="statusOf(repository)!.build" /></div>
-              <div class="cell"><span class="label">Release</span>{{ statusOf(repository)!.release ?? '—' }}</div>
-              <div v-for="environment in statusOf(repository)!.environments" :key="environment.environment" class="cell">
-                <span class="label">{{ environment.environment }}</span><HealthCell :cell="environment.status" />
-              </div>
-            </div>
-            <div v-else class="cells fh-muted">
+            <template v-if="statusOf(repository)">
+              <button type="button" class="cell" title="Pull request — kliknij po szczegóły" @click.stop="open(repository, 'pr')">
+                <span class="label">PR</span>
+                <span class="value">
+                  <v-icon :icon="healthPresentation[statusOf(repository)!.pullRequest.level].icon" :color="healthPresentation[statusOf(repository)!.pullRequest.level].color" size="16" />
+                  {{ statusOf(repository)!.pullRequest.text }}
+                </span>
+              </button>
+              <button type="button" class="cell" title="Build — kliknij po szczegóły i testy" @click.stop="open(repository, 'build')">
+                <span class="label">Build</span>
+                <span class="value">
+                  <v-icon :icon="healthPresentation[statusOf(repository)!.build.level].icon" :color="healthPresentation[statusOf(repository)!.build.level].color" size="16" />
+                  {{ statusOf(repository)!.build.text }}
+                </span>
+              </button>
+              <button type="button" class="cell environments" title="Wersja wdrożona na środowiskach — kliknij po szczegóły" @click.stop="open(repository, 'deploy')">
+                <span class="label">Wdrożone</span>
+                <span class="value">
+                  <span
+                    v-for="environment in statusOf(repository)!.environments"
+                    :key="environment.environment"
+                    class="environment"
+                    :class="{ mine: environment.status.level === 'Ok', problem: environment.status.level === 'Failed' }"
+                  >
+                    <span class="env-name">{{ environment.environment }}</span>{{ environment.status.text }}
+                  </span>
+                  <span v-if="statusOf(repository)!.environments.length === 0" class="fh-muted">—</span>
+                </span>
+              </button>
+            </template>
+            <div v-else class="pending fh-muted">
               <template v-if="repository.catalogName">sprawdzam statusy…</template>
               <template v-else>
-                Nie ma w katalogu repo — bez tego FlowHub nie wie, gdzie szukać PR i buildów.
-                <v-btn v-if="repository.remoteUrl" size="small" variant="tonal" color="primary" class="ml-2" @click.stop="addToCatalog(repository)">
-                  Dodaj do katalogu
-                </v-btn>
+                Nie ma w katalogu repo — FlowHub nie wie, gdzie szukać PR i buildów.
+                <v-btn v-if="repository.remoteUrl" size="x-small" variant="tonal" color="primary" class="ml-2" @click.stop="addToCatalog(repository)">Dodaj do katalogu</v-btn>
               </template>
             </div>
 
-            <div class="actions" @click.stop>
-              <SystemLinks :links="statusOf(repository)?.links" />
-              <v-btn :href="vsCodeLink(repository.path)" size="x-small" variant="tonal" prepend-icon="mdi-microsoft-visual-studio-code">VS Code</v-btn>
-            </div>
+            <v-btn :href="vsCodeLink(repository.path)" size="x-small" variant="text" icon="mdi-microsoft-visual-studio-code" title="Otwórz w VS Code" @click.stop />
+            <v-icon :icon="opened?.path === repository.path ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="20" class="fh-muted" />
           </div>
 
-          <div v-if="expanded === repository.path" class="details">
-            <div>
-              <h4>Ostatnie commity (lokalnie)</h4>
-              <div v-for="commit in repository.recentCommits" :key="commit.hash">
-                <code>{{ commit.hash }}</code> {{ commit.subject }}
-                <span class="fh-muted">— {{ commit.author }}, {{ formatDateTime(commit.date) }}</span>
-              </div>
-              <p v-if="repository.recentCommits.length === 0" class="fh-muted">brak commitów</p>
-            </div>
-            <div v-if="statusOf(repository)?.builds.length">
-              <h4>Buildy</h4>
-              <div v-for="build in statusOf(repository)!.builds" :key="build.configuration + build.number" class="build">
-                <a :href="build.url" target="_blank" rel="noopener">{{ build.configuration }} #{{ build.number }}</a>
-                <span v-if="build.branch" class="fh-muted"> · {{ build.branch }}</span>
-                <div v-if="build.statusText">{{ build.statusText }}</div>
-                <div v-for="test in build.failedTests" :key="test" class="text-error">✗ {{ test }}</div>
-              </div>
-            </div>
-            <div v-if="statusOf(repository)?.changes.length">
-              <h4>Zmiany widoczne na serwerze</h4>
-              <div v-for="change in statusOf(repository)!.changes" :key="change.revision">
-                <code>{{ change.revision }}</code> {{ change.comment }} <span class="fh-muted">— {{ change.author }}</span>
-              </div>
-            </div>
-            <div class="fh-muted">
-              Ścieżka: {{ repository.path }}<br />Origin: {{ repository.remoteUrl ?? 'brak' }}
-              <template v-if="local.statuses[repository.path]"><br />Statusy sprawdzono: {{ formatDateTime(local.statuses[repository.path]!.checkedAt) }}</template>
-              <div v-if="repository.catalogName" class="mt-2">
-                <v-btn size="small" variant="tonal" prepend-icon="mdi-stethoscope" @click="diagnosed = { name: repository.catalogName, branch: repository.branch }">
-                  Diagnostyka połączeń
-                </v-btn>
-              </div>
-            </div>
-          </div>
+          <RepoDetails
+            v-if="opened?.path === repository.path"
+            v-model:tab="opened.tab"
+            :pull-request="statusOf(repository)?.pullRequest ?? { level: 'Unknown', text: '—', url: null }"
+            :pull-request-details="statusOf(repository)?.pullRequestDetails ?? null"
+            :build="statusOf(repository)?.build ?? { level: 'Unknown', text: '—', url: null }"
+            :builds="statusOf(repository)?.builds ?? []"
+            :changes="statusOf(repository)?.changes ?? []"
+            :environments="statusOf(repository)?.environments ?? []"
+            :release="statusOf(repository)?.release ?? null"
+            :links="statusOf(repository)?.links ?? null"
+            :local-commits="repository.recentCommits"
+          >
+            <template #info>
+              <dl class="info">
+                <dt>Ścieżka</dt>
+                <dd>{{ repository.path }}</dd>
+                <dt>Origin</dt>
+                <dd>{{ repository.remoteUrl ?? 'brak' }}</dd>
+                <dt>W katalogu repo</dt>
+                <dd>{{ repository.catalogName ?? 'nie' }}</dd>
+                <template v-if="local.statuses[repository.path]">
+                  <dt>Statusy sprawdzono</dt>
+                  <dd>{{ formatDateTime(local.statuses[repository.path]!.checkedAt) }}</dd>
+                </template>
+              </dl>
+              <v-btn
+                v-if="repository.catalogName"
+                size="small"
+                variant="tonal"
+                prepend-icon="mdi-stethoscope"
+                @click="diagnosed = { name: repository.catalogName, branch: repository.branch }"
+              >
+                Diagnostyka połączeń
+              </v-btn>
+            </template>
+          </RepoDetails>
         </v-card>
       </div>
     </div>
@@ -191,7 +213,7 @@ onMounted(() => local.load())
 .local {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.6rem;
 }
 
 .toolbar {
@@ -206,127 +228,167 @@ onMounted(() => local.load())
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1.05rem;
+  font-size: 0.9rem;
 }
 
 .empty {
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
-.empty a,
-.details a {
+.empty a {
   color: #c4b5fd;
 }
 
 .folder-head {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   width: 100%;
-  padding: 0.5rem 0.25rem;
+  padding: 0.35rem 0.1rem;
   background: none;
   border: 0;
   color: inherit;
   font: inherit;
-  font-size: 1.05rem;
   text-align: left;
   cursor: pointer;
 }
 
 /* Linia drzewa: repo w folderze są wcięte i połączone pionową kreską. */
 .children {
-  margin-left: 0.85rem;
-  padding-left: 1.25rem;
+  margin-left: 0.6rem;
+  padding-left: 1rem;
   border-left: 2px solid var(--fh-border);
 }
 
 .repo {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
+.repo.open {
+  border-color: rgba(167, 139, 250, 0.45) !important;
+}
+
+/* Stałe kolumny: nazwy i statusy stoją równo w całym drzewie. */
 .row {
   display: grid;
-  grid-template-columns: minmax(240px, 1.1fr) minmax(0, 2fr) auto;
-  gap: 1.25rem;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(130px, 0.9fr) minmax(170px, 1.1fr) minmax(200px, 2fr) auto auto;
+  gap: 0.75rem;
   align-items: center;
-  padding: 1rem 1.25rem;
+  padding: 0.6rem 0.9rem;
   cursor: pointer;
 }
 
 .name {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.1rem;
+  gap: 0.45rem;
   font-weight: 700;
+  min-width: 0;
 }
 
-.branch {
+.name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sub {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.4rem;
-}
-
-.commit {
-  margin-top: 0.4rem;
-  font-size: 0.8rem;
-}
-
-.cells {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.5rem;
-  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+  padding-left: 1.7rem;
 }
 
 .cell {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  min-width: 80px;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cell:hover {
+  background: rgba(139, 92, 246, 0.12);
 }
 
 .label {
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
+  font-size: 0.65rem;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--fh-muted);
 }
 
-.actions {
+.value {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.35rem;
-  max-width: 260px;
+  align-items: center;
+  gap: 0.3rem 0.5rem;
 }
 
-.details {
+.environment {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--fh-border);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.environment.mine {
+  border-color: rgba(34, 197, 94, 0.6);
+  color: #86efac;
+}
+
+.environment.problem {
+  border-color: rgba(244, 63, 94, 0.6);
+  color: #fda4af;
+}
+
+.env-name {
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  color: var(--fh-muted);
+}
+
+.pending {
+  grid-column: span 3;
+  font-size: 0.85rem;
+}
+
+.info {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  padding: 1rem 1.25rem 1.25rem;
-  border-top: 1px solid var(--fh-border);
-  font-size: 0.875rem;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1.25rem;
+  margin: 0 0 0.9rem;
 }
 
-.details h4 {
-  margin: 0 0 0.4rem;
+.info dt {
+  color: var(--fh-muted);
 }
 
-.build {
-  margin-bottom: 0.5rem;
+.info dd {
+  margin: 0;
+  word-break: break-all;
 }
 
 @media (max-width: 1100px) {
   .row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
-  .actions {
-    justify-content: flex-start;
-    max-width: none;
+  .pending {
+    grid-column: span 2;
   }
 }
 </style>

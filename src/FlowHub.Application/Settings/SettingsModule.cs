@@ -20,7 +20,9 @@ public sealed record SettingField(
     string Label,
     SettingKind Kind = SettingKind.Text,
     string? Hint = null,
-    IReadOnlyList<SettingChoice>? Choices = null);
+    IReadOnlyList<SettingChoice>? Choices = null,
+    bool Suggest = false,
+    bool Multiple = false);
 
 /// <summary>Configured = false: nie ma czego testować, bo moduł nie jest jeszcze ustawiony (to nie błąd).</summary>
 public sealed record ConnectionTest(bool Ok, string Message, bool Configured = true);
@@ -45,6 +47,12 @@ public interface ISettingsModule
     bool CanTest => false;
 
     Task<ConnectionTest> TestAsync(CancellationToken ct) => Task.FromResult(new ConnectionTest(true, "Brak testu."));
+
+    /// <summary>
+    /// Wartości do wyboru dla pola z Suggest = true (np. środowiska z serwera wdrożeń, znane modele).
+    /// Pole dalej przyjmuje wartość wpisaną ręcznie — lista jest tylko ułatwieniem.
+    /// </summary>
+    Task<IReadOnlyList<string>> SuggestAsync(string key, CancellationToken ct) => Task.FromResult<IReadOnlyList<string>>([]);
 }
 
 /// <summary>Port: ustawienia użytkownika (plik poza repo), nakładane na appsettings.json.</summary>
@@ -55,6 +63,14 @@ public interface ISettingsStore
 
     /// <summary>Zapisuje wartości i odświeża konfigurację — bez restartu aplikacji. null = usuń nadpisanie.</summary>
     void Save(IReadOnlyDictionary<string, string?> values);
+}
+
+/// <summary>Port: modele Copilota widziane w dotychczasowych sesjach CLI (CLI nie ma polecenia „wypisz modele”).</summary>
+public interface IKnownModels
+{
+    IReadOnlyList<string> All();
+
+    void Remember(IEnumerable<string> models);
 }
 
 /// <summary>Port: sekrety (tokeny API). Nigdy w repo, logach ani odpowiedziach API.</summary>

@@ -19,7 +19,7 @@ public sealed class FlowEditorTests : IClassFixture<FlowHubApiFactory>, IDisposa
         var real = factory.Services.GetRequiredService<WorkspacePaths>();
         Copy(real.FlowsDirectory, Path.Combine(_root, "flows"));
         Copy(real.BlocksDirectory, Path.Combine(_root, "blocks"));
-        File.Copy(real.RepositoriesFile, Path.Combine(_root, "repos.yaml"));
+        File.Copy(real.SeedRepositoriesFile, Path.Combine(_root, "repos.yaml"));
 
         _factory = factory.WithWebHostBuilder(builder => builder.UseSetting("Workspace:Root", _root));
     }

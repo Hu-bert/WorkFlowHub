@@ -28,7 +28,7 @@ Bez żadnej konfiguracji aplikacja działa na **atrapach (Fake)**: agent udaje s
 
 ## Połączenia
 
-Wszystko ustawiasz na stronie **Ustawienia** — zmiany działają od razu, bez restartu. Ustawienia trafiają do `%LOCALAPPDATA%\FlowHub\settings.json`, a tokeny (zaszyfrowane) do `secrets.json` obok — nigdy do repo.
+Wszystko ustawiasz na stronie **Ustawienia** — zmiany działają od razu, bez restartu. Ustawienia, tokeny (zaszyfrowane), katalog repo i mapy repo leżą w `%LOCALAPPDATA%\FlowHub` — nigdy w repo. Dokładne ścieżki pokazuje karta „Gdzie są zapisane dane” w Ustawieniach.
 
 | Co | Gdzie | Uwagi |
 |---|---|---|
@@ -39,7 +39,7 @@ Wszystko ustawiasz na stronie **Ustawienia** — zmiany działają od razu, bez 
 | Wdrożenia i środowiska | Ustawienia → Octopus Deploy | Także lista pokazywanych środowisk i środowisko domyślne. |
 | Jira | Ustawienia → Jira | Stara Jira bez API: zostaw atrapę i wklejaj treść ręcznie. |
 | Folder z repozytoriami | Ustawienia → Repozytoria lokalne | Np. `C:\tfs` — strona Repozytoria pokaże kopie jako drzewo, ze statusami. |
-| Katalog repo | Repozytoria → Katalog repo | Skąd klonować repo i jak nazywa się w TeamCity / Octopus (zapis do `repos.yaml`). |
+| Katalog repo | Repozytoria → Katalog repo | Skąd klonować repo i jak nazywa się w TeamCity / Octopus. Zapis w folderze ustawień; `repos.yaml` w repo to przykład startowy. |
 | Kolumny kanbana | `Board:Columns` w [appsettings.json](src/FlowHub.Api/appsettings.json) | |
 
 Klienty TFS, TeamCity, Octopus i Jira są napisane wg dokumentacji i **nie były sprawdzone na prawdziwych serwerach** — kroki podłączenia i diagnostyka: [docs/polaczenia-w-pracy.md](docs/polaczenia-w-pracy.md).

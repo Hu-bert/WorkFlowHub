@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-import { removeRepository } from '@/api/repositories'
+import { cloneRepository, removeRepository } from '@/api/repositories'
 import type { CodeRepository } from '@/api/types'
 import LocalRepositories from '@/components/LocalRepositories.vue'
 import RepoMapDialog from '@/components/RepoMapDialog.vue'
@@ -18,7 +18,36 @@ const tab = ref<'local' | 'catalog'>('local')
 const edited = ref<{ repository: CodeRepository; isNew: boolean } | null>(null)
 const mapOf = ref<string | null>(null)
 
-onMounted(() => catalog.load().catch(notifications.error))
+/** Klonowanie: repo z katalogu → wybrany folder na dysku (domyślnie folder repozytoriów, np. z podfolderem brancha). */
+const cloned = ref<CodeRepository | null>(null)
+const cloneDirectory = ref('')
+const cloning = ref(false)
+
+function askClone(repository: CodeRepository) {
+  cloned.value = repository
+  cloneDirectory.value = local.scan?.root ?? ''
+}
+
+async function clone() {
+  if (!cloned.value) return
+  cloning.value = true
+  try {
+    const result = await cloneRepository(cloned.value.name, cloneDirectory.value.trim() || null)
+    notifications.success(`Sklonowano do ${result.path}`)
+    cloned.value = null
+    tab.value = 'local'
+    await local.load(true)
+  } catch (error) {
+    notifications.error(error)
+  } finally {
+    cloning.value = false
+  }
+}
+
+onMounted(() => {
+  catalog.load().catch(notifications.error)
+  void local.load()
+})
 
 const emptyRepository = (): CodeRepository => ({ name: '', url: '', defaultBranch: 'main', ciBuildConfigurations: [], deployProject: null, keywords: [] })
 
@@ -93,6 +122,7 @@ async function remove(repository: CodeRepository) {
               <td class="actions">
                 <v-btn size="small" variant="tonal" prepend-icon="mdi-pencil-outline" @click="edited = { repository, isNew: false }">Edytuj</v-btn>
                 <v-btn size="small" variant="tonal" prepend-icon="mdi-map-outline" @click="mapOf = repository.name">Mapa</v-btn>
+                <v-btn size="small" variant="tonal" prepend-icon="mdi-download-outline" @click="askClone(repository)">Klonuj</v-btn>
                 <v-btn size="small" variant="text" icon="mdi-delete-outline" title="Usuń z katalogu" @click="remove(repository)" />
               </td>
             </tr>
@@ -106,6 +136,27 @@ async function remove(repository: CodeRepository) {
 
     <RepositoryDialog :repository="edited?.repository ?? null" :is-new="edited?.isNew ?? false" @close="edited = null" @saved="afterChange" />
     <RepoMapDialog :repository="mapOf" @close="mapOf = null" />
+
+    <v-dialog :model-value="cloned !== null" max-width="640" :persistent="cloning" @update:model-value="cloned = null">
+      <v-card v-if="cloned" :title="`Klonuj ${cloned.name}`" prepend-icon="mdi-download-outline">
+        <v-card-text>
+          <v-text-field
+            v-model="cloneDirectory"
+            label="Folder docelowy"
+            prepend-inner-icon="mdi-folder-outline"
+            :hint="`Repo trafi do: ${(cloneDirectory || '…').replace(/[\\\\/]+$/, '')}\\${cloned.name}. Dopisz podfolder, np. nazwę brancha.`"
+            persistent-hint
+            autofocus
+          />
+          <p class="fh-muted clone-note">Źródło: {{ cloned.url }}. Logowanie do serwera wykonuje Git (zapisane dane dostępowe).</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" :disabled="cloning" @click="cloned = null">Anuluj</v-btn>
+          <v-btn color="primary" variant="flat" prepend-icon="mdi-download-outline" :disabled="!cloneDirectory.trim()" :loading="cloning" @click="clone">Klonuj</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </section>
 </template>
 
@@ -124,6 +175,12 @@ async function remove(repository: CodeRepository) {
 
 .actions {
   white-space: nowrap;
+}
+
+.clone-note {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+  word-break: break-all;
 }
 
 .actions .v-btn {

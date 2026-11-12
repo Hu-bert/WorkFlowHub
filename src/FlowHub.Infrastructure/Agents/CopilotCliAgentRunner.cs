@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using FlowHub.Application.Agents;
+using FlowHub.Application.Settings;
 using FlowHub.Domain.WorkItems;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,7 +17,7 @@ namespace FlowHub.Infrastructure.Agents;
 /// Sprawdzone na Copilot CLI 1.0.109. W trybie -p CLI nie pyta o zgodę: narzędzie spoza listy
 /// --allow-tool jest odrzucane. Tokeny przychodzą dopiero na końcu (plik --usage-output-file).
 /// </summary>
-public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogger<CopilotCliAgentRunner> logger) : IAgentRunner
+public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogger<CopilotCliAgentRunner> logger, IKnownModels? knownModels = null) : IAgentRunner
 {
     public async IAsyncEnumerable<AgentEvent> RunAsync(AgentRequest request, [EnumeratorCancellation] CancellationToken ct)
     {
@@ -54,7 +55,10 @@ public sealed class CopilotCliAgentRunner(IOptions<AgentOptions> options, ILogge
 
         await process.WaitForExitAsync(ct);
 
-        foreach (var usage in ReadUsage(usageFile))
+        var usages = ReadUsage(usageFile);
+        knownModels?.Remember(parser.SeenModels.Concat(usages.Select(usage => usage.Model).OfType<string>()));
+
+        foreach (var usage in usages)
         {
             yield return new AgentEvent.Usage(usage, Final: true);
         }

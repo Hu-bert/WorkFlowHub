@@ -19,6 +19,9 @@ public sealed class CopilotJsonlParser
     private readonly Dictionary<string, string> _toolNames = [];
     private bool _sawDelta;
 
+    /// <summary>Modele, które CLI wymieniło w tej sesji (wybrany oraz dostępne dla trybu auto) — do podpowiedzi w Ustawieniach.</summary>
+    public HashSet<string> SeenModels { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Ostatnia pełna wypowiedź agenta — używana jako podsumowanie kroku.</summary>
     public string LastMessage { get; private set; } = "";
 
@@ -38,6 +41,7 @@ public sealed class CopilotJsonlParser
         {
             var type = Text(root.RootElement, "type") ?? "";
             var data = root.RootElement.TryGetProperty("data", out var nested) ? nested : root.RootElement;
+            CollectModels(type, data);
             return Map(type, data);
         }
     }
@@ -76,6 +80,28 @@ public sealed class CopilotJsonlParser
         }
 
         return result;
+    }
+
+    /// <summary>session.auto_mode_resolved: chosenModel + availableModels; session.model_change: newModel.</summary>
+    private void CollectModels(string type, JsonElement data)
+    {
+        if (type is not ("session.auto_mode_resolved" or "session.model_change"))
+        {
+            return;
+        }
+
+        foreach (var name in new[] { Text(data, "chosenModel"), Text(data, "newModel") }.OfType<string>())
+        {
+            SeenModels.Add(name);
+        }
+
+        if (data.TryGetProperty("availableModels", out var available) && available.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var model in available.EnumerateArray().Where(model => model.ValueKind == JsonValueKind.String))
+            {
+                SeenModels.Add(model.GetString()!);
+            }
+        }
     }
 
     private AgentEvent? Map(string type, JsonElement data) => type switch

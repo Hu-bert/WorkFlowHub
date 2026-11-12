@@ -129,6 +129,15 @@ public sealed class SettingsService(IEnumerable<ISettingsModule> modules, ISetti
         }
     }
 
+    public Task<IReadOnlyList<string>> SuggestAsync(string moduleId, string key, CancellationToken ct)
+    {
+        var module = Find(moduleId);
+
+        return module.Fields.Any(field => field.Key == key && field.Suggest)
+            ? module.SuggestAsync(key, ct)
+            : throw new DomainException($"Pole '{key}' nie ma listy podpowiedzi.");
+    }
+
     private ISettingsModule Find(string moduleId) =>
         modules.FirstOrDefault(module => module.Id == moduleId)
         ?? throw new DomainException($"Nieznany moduł ustawień '{moduleId}'.");

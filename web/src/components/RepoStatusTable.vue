@@ -9,16 +9,16 @@ import { useNotifications } from '@/stores/notifications'
 
 import DiffDialog from './DiffDialog.vue'
 import HealthCell from './HealthCell.vue'
+import RepoDetails, { type RepoDetailsTab } from './RepoDetails.vue'
 import StatusBadge from './StatusBadge.vue'
-import SystemLinks from './SystemLinks.vue'
 
-/** Najważniejszy widok zadania: jeden wiersz = jedno repo (testy, PR, build, release, środowiska). */
+/** Najważniejszy widok zadania: jeden wiersz = jedno repo (testy, PR, build, wersje na środowiskach). */
 const props = defineProps<{ workItemId: string; refreshKey: number }>()
 
 const notifications = useNotifications()
 const status = ref<WorkItemRepoStatus | null>(null)
 const loading = ref(false)
-const expanded = ref<string | null>(null)
+const opened = ref<{ repo: string; tab: RepoDetailsTab } | null>(null)
 const diffRepo = ref<string | null>(null)
 
 const environments = computed(() => status.value?.repos[0]?.environments.map((cell) => cell.environment) ?? [])
@@ -46,15 +46,21 @@ const onRefreshed = (fresh: WorkItemRepoStatus) => {
 liveConnection().on('repoStatusChanged', onRefreshed)
 onUnmounted(() => liveConnection().off('repoStatusChanged', onRefreshed))
 
+/** Klik w wiersz zwija / rozwija; klik w komórkę (PR, build, środowisko) otwiera od razu jej zakładkę. */
+function open(repo: RepoStatus, tab?: RepoDetailsTab) {
+  const same = opened.value?.repo === repo.repo
+  if (same && (!tab || opened.value?.tab === tab)) opened.value = null
+  else opened.value = { repo: repo.repo, tab: tab ?? (same ? opened.value!.tab : 'pr') }
+}
+
 const vsCodeLink = (path: string) => `vscode://file/${path.replace(/\\/g, '/')}`
-const voteLabel = { Waiting: 'czeka', Approved: 'zaakceptował', ApprovedWithSuggestions: 'zaakceptował z uwagami', Rejected: 'odrzucił' }
 </script>
 
 <template>
   <v-card>
     <div class="head">
       <div class="title">
-        <v-icon icon="mdi-source-repository-multiple" />
+        <v-icon icon="mdi-source-repository-multiple" size="20" />
         <span>Repozytoria</span>
         <StatusBadge
           v-if="status"
@@ -69,74 +75,70 @@ const voteLabel = { Waiting: 'czeka', Approved: 'zaakceptował', ApprovedWithSug
       </div>
     </div>
 
-    <v-table v-if="status">
+    <v-table v-if="status" density="compact">
       <thead>
         <tr>
           <th>Repo</th>
           <th>Branch</th>
           <th>Testy</th>
-          <th>PR (TFS)</th>
-          <th>Build (TC)</th>
-          <th>Release</th>
+          <th>PR</th>
+          <th>Build</th>
           <th v-for="environment in environments" :key="environment">{{ environment }}</th>
           <th>Akcje</th>
         </tr>
       </thead>
       <tbody>
         <template v-for="repo in status.repos" :key="repo.repo">
-          <tr class="repo-row" @click="expanded = expanded === repo.repo ? null : repo.repo">
+          <tr class="repo-row" :class="{ open: opened?.repo === repo.repo }" @click="open(repo)">
             <td class="font-weight-bold">
               <v-icon :icon="healthPresentation[repo.level].icon" :color="healthPresentation[repo.level].color" size="18" />
               {{ repo.repo }}
             </td>
             <td><code>{{ repo.branch }}</code></td>
-            <td><HealthCell :cell="repo.tests" /></td>
-            <td><HealthCell :cell="repo.pullRequest" /></td>
-            <td><HealthCell :cell="repo.build" /></td>
-            <td>{{ repo.release ?? '—' }}</td>
-            <td v-for="environment in environments" :key="environment">
-              <HealthCell :cell="environmentCell(repo, environment)" />
+            <td><HealthCell :cell="{ ...repo.tests, url: null }" /></td>
+            <td class="clickable" title="Kliknij po szczegóły pull requesta" @click.stop="open(repo, 'pr')">
+              <HealthCell :cell="{ ...repo.pullRequest, url: null }" />
+            </td>
+            <td class="clickable" title="Kliknij po szczegóły builda i testy" @click.stop="open(repo, 'build')">
+              <HealthCell :cell="{ ...repo.build, url: null }" />
+            </td>
+            <td
+              v-for="environment in environments"
+              :key="environment"
+              class="clickable"
+              title="Wersja wdrożona na środowisku — kliknij po szczegóły"
+              @click.stop="open(repo, 'deploy')"
+            >
+              <HealthCell :cell="{ ...environmentCell(repo, environment), url: null }" />
             </td>
             <td class="actions" @click.stop>
               <a href="#" @click.prevent="diffRepo = repo.repo">Diff</a> ·
               <a :href="vsCodeLink(repo.localPath)">VS Code</a>
-              <SystemLinks :links="repo.links" class="ml-2" />
             </td>
           </tr>
 
-          <tr v-if="expanded === repo.repo" class="details-row">
-            <td :colspan="7 + environments.length">
-              <div class="details">
-                <div v-if="repo.pullRequestDetails">
-                  <h4>Pull request #{{ repo.pullRequestDetails.id }} — {{ repo.pullRequestDetails.state }}</h4>
-                  <div v-for="reviewer in repo.pullRequestDetails.reviewers" :key="reviewer.name">
-                    {{ reviewer.name }}: {{ voteLabel[reviewer.vote] }}
-                  </div>
-                  <div>Nierozwiązane komentarze: {{ repo.pullRequestDetails.unresolvedComments }}</div>
-                  <div v-for="policy in repo.pullRequestDetails.policies" :key="policy.name">
-                    <v-icon :icon="policy.passed ? 'mdi-check' : 'mdi-close'" :color="policy.passed ? 'success' : 'error'" size="16" />
-                    {{ policy.name }}: {{ policy.passed ? 'spełniona' : 'niespełniona' }}
-                  </div>
-                  <div v-if="repo.pullRequestDetails.hasConflicts" class="text-error">Konflikty scalania</div>
-                </div>
-
-                <div>
-                  <h4>TeamCity</h4>
-                  <div v-for="build in repo.builds" :key="build.configuration">
-                    <a :href="build.url" target="_blank" rel="noopener">{{ build.configuration }} #{{ build.number }}</a> — {{ build.state }}
-                    <div v-for="test in build.failedTests" :key="test" class="text-error failed-test">✗ {{ test }}</div>
-                  </div>
-                  <div v-if="repo.builds.length === 0" class="fh-muted">Brak buildów.</div>
-                </div>
-
-                <div>
-                  <h4>Zmiany widziane przez TeamCity</h4>
-                  <div v-for="change in repo.changes" :key="change.revision">
-                    <code>{{ change.revision }}</code> {{ change.comment }}
-                  </div>
-                  <div v-if="repo.changes.length === 0" class="fh-muted">Brak zmian.</div>
-                </div>
-              </div>
+          <tr v-if="opened?.repo === repo.repo" class="details-row">
+            <td :colspan="6 + environments.length">
+              <RepoDetails
+                v-model:tab="opened.tab"
+                :pull-request="repo.pullRequest"
+                :pull-request-details="repo.pullRequestDetails"
+                :build="repo.build"
+                :builds="repo.builds"
+                :changes="repo.changes"
+                :environments="repo.environments"
+                :release="repo.release"
+                :links="repo.links"
+              >
+                <template #info>
+                  <dl class="info">
+                    <dt>Katalog</dt>
+                    <dd>{{ repo.localPath }}</dd>
+                    <dt>Branch zadania</dt>
+                    <dd>{{ repo.branch }}</dd>
+                  </dl>
+                </template>
+              </RepoDetails>
             </td>
           </tr>
         </template>
@@ -154,14 +156,14 @@ const voteLabel = { Waiting: 'czeka', Approved: 'zaakceptował', ApprovedWithSug
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  padding: 1rem 1.25rem 0.5rem;
+  padding: 0.75rem 1rem 0.4rem;
 }
 
 .title {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 1.15rem;
+  gap: 0.6rem;
+  font-size: 1rem;
   font-weight: 600;
 }
 
@@ -176,34 +178,37 @@ const voteLabel = { Waiting: 'czeka', Approved: 'zaakceptował', ApprovedWithSug
   cursor: pointer;
 }
 
+.clickable:hover {
+  background: rgba(139, 92, 246, 0.12);
+}
+
+.actions {
+  white-space: nowrap;
+}
+
 .actions a {
   color: #c4b5fd;
   text-decoration: none;
 }
 
-.details-row td {
+.details-row > td {
+  padding: 0 !important;
   background: rgba(15, 12, 29, 0.6);
 }
 
-.details {
+.info {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1.5rem;
-  padding: 1rem 0;
-  font-size: 0.875rem;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1.25rem;
+  margin: 0;
 }
 
-.details h4 {
-  margin: 0 0 0.4rem;
+.info dt {
+  color: var(--fh-muted);
 }
 
-.details a {
-  color: #c4b5fd;
-}
-
-.failed-test {
-  padding-left: 1rem;
-  font-family: Consolas, monospace;
-  font-size: 0.8rem;
+.info dd {
+  margin: 0;
+  word-break: break-all;
 }
 </style>

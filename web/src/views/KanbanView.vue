@@ -85,7 +85,7 @@ const openItem = (item: WorkItemDetails) => router.push({ name: 'work-item', par
 .board {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(250px, 1fr);
+  grid-auto-columns: minmax(200px, 1fr);
   gap: 1rem;
   overflow-x: auto;
   padding-bottom: 0.5rem;
