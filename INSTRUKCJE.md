@@ -344,3 +344,11 @@ Fazy 9–12 — szczegóły i lista rzeczy niesprawdzonych w [docs/DECYZJE.md](d
 - **Katalog repo edytuje się w aplikacji** (plik `repos.yaml` to tylko miejsce zapisu). Lokalne kopie pokazujemy jako drzewo folderów, z pamięcią wyników.
 - **Mapa repo** (`remember: true`) — analiza jest zapamiętywana w `knowledge/` i aktualizowana w kolejnych zadaniach.
 - Przy problemach z integracją: Repozytoria → „Diagnostyka połączeń”.
+
+### Faza 14 (2026-11-12) — interfejs i dane użytkownika
+
+- **Dane użytkownika (ustawienia, tokeny, katalog repo `repos.yaml`, mapy repo) leżą w `%LOCALAPPDATA%\FlowHub`**, nie w repozytorium. Plik `repos.yaml` w repo to tylko przykład startowy.
+- Szczegóły repo są w **zakładkach** (wspólny komponent `RepoDetails`); wiersz pokazuje PR, build i **wersję wdrożoną na każdym środowisku**.
+- Wygląd kontrolek ustawia się w jednym miejscu: `web/src/plugins/vuetify.ts` (defaults) i `web/src/styles/main.css`. Nowe widoki nie nadpisują gęstości ani wariantów pól.
+- Pola ustawień mogą mieć listę podpowiedzi z serwera (`SettingField.Suggest`).
+- Otwarte tematy: logFaces i sprawdzanie procesu na zdalnej maszynie — opis w [docs/DECYZJE.md](docs/DECYZJE.md).

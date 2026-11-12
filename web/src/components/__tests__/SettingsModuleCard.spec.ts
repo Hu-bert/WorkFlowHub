@@ -15,8 +15,8 @@ const module = (): SettingsModule => ({
   description: 'Pull requesty',
   canTest: true,
   fields: [
-    { field: { key: 'Tfs:CollectionUrl', label: 'Adres kolekcji', kind: 'Text', hint: null, choices: null }, value: 'https://stary', hasValue: true },
-    { field: { key: 'Tfs:Token', label: 'Token (PAT)', kind: 'Secret', hint: null, choices: null }, value: null, hasValue: true },
+    { field: { key: 'Tfs:CollectionUrl', label: 'Adres kolekcji', kind: 'Text', hint: null, choices: null, suggest: false, multiple: false }, value: 'https://stary', hasValue: true },
+    { field: { key: 'Tfs:Token', label: 'Token (PAT)', kind: 'Secret', hint: null, choices: null, suggest: false, multiple: false }, value: null, hasValue: true },
   ],
 })
 

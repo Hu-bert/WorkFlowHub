@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
-import { fetchSettings, type SettingsModule } from '@/api/settings'
+import { fetchSettings, fetchStorage, type SettingsModule, type StorageLocation } from '@/api/settings'
 import SettingsModuleCard from '@/components/SettingsModuleCard.vue'
 import { useCatalog } from '@/stores/catalog'
 import { connectionPresentationOf, useConnections } from '@/stores/connections'
@@ -12,12 +12,14 @@ const connections = useConnections()
 const notifications = useNotifications()
 const modules = ref<SettingsModule[]>([])
 const selectedId = ref<string | null>(null)
+const storage = ref<StorageLocation[]>([])
 
 const selected = computed(() => modules.value.find((module) => module.id === selectedId.value) ?? modules.value[0] ?? null)
 
 onMounted(async () => {
   try {
     modules.value = await fetchSettings()
+    storage.value = await fetchStorage()
     await connections.load()
   } catch (error) {
     notifications.error(error)
@@ -65,6 +67,7 @@ function replace(saved: SettingsModule) {
         </v-list>
       </v-card>
 
+      <div class="detail">
       <SettingsModuleCard
         v-if="selected"
         :key="selected.id"
@@ -73,6 +76,20 @@ function replace(saved: SettingsModule) {
         @saved="replace"
         @tested="connections.load()"
       />
+
+      <v-card class="storage">
+        <h3><v-icon icon="mdi-harddisk" size="18" /> Gdzie są zapisane dane</h3>
+        <p class="fh-muted">
+          Ustawienia, tokeny, katalog repo i mapy repo leżą poza repozytorium FlowHub — aktualizacja aplikacji (<code>git pull</code>) ich nie rusza.
+        </p>
+        <dl>
+          <template v-for="location in storage" :key="location.name">
+            <dt :title="location.description">{{ location.name }}</dt>
+            <dd><code>{{ location.path }}</code></dd>
+          </template>
+        </dl>
+      </v-card>
+      </div>
     </div>
   </section>
 </template>
@@ -88,6 +105,43 @@ function replace(saved: SettingsModule) {
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 1.5rem;
   align-items: start;
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.storage {
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+}
+
+.storage h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+}
+
+.storage p {
+  margin: 0 0 0.75rem;
+}
+
+.storage dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.3rem 1.25rem;
+  margin: 0;
+}
+
+.storage dt {
+  color: var(--fh-muted);
+}
+
+.storage dd {
+  margin: 0;
+  word-break: break-all;
 }
 
 .list {

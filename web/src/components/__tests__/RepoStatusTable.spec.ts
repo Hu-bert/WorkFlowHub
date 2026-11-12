@@ -48,18 +48,18 @@ describe('RepoStatusTable', () => {
 
     expect(wrapper.findAll('tr.repo-row')).toHaveLength(2)
     expect(wrapper.findAll('th').map((th) => th.text())).toEqual(
-      ['Repo', 'Branch', 'Testy', 'PR (TFS)', 'Build (TC)', 'Release', 'DEV', 'TEST', 'Akcje'],
+      ['Repo', 'Branch', 'Testy', 'PR', 'Build', 'DEV', 'TEST', 'Akcje'],
     )
     expect(wrapper.text()).toContain('1 z 2 repo gotowe na DEV')
   })
 
-  it('every status cell has text and an icon, and links to the source system', async () => {
+  it('every status cell has text and an icon; clicking it opens the details instead of leaving the page', async () => {
     vi.mocked(fetchRepoStatus).mockResolvedValue(status([repo('Billing.Api')]))
 
     const wrapper = await mountApp(RepoStatusTable, { workItemId: 'item-1', refreshKey: 0 })
     const prCell = wrapper.findAll('.health-cell').find((candidate) => candidate.text() === '2/3 akcept.')!
 
-    expect(prCell.attributes('href')).toBe('https://tfs/pr/1')
+    expect(prCell.attributes('href')).toBeUndefined()
     expect(prCell.find('.v-icon').exists()).toBe(true)
     expect(wrapper.find('a[href^="vscode://file/"]').attributes('href')).toBe('vscode://file/C:/work/PROJ-1/Billing.Api')
   })
@@ -96,9 +96,16 @@ describe('RepoStatusTable', () => {
 
     await wrapper.find('tr.repo-row').trigger('click')
 
-    expect(wrapper.text()).toContain('Anna Nowak: odrzucił')
-    expect(wrapper.text()).toContain('Build validation: niespełniona')
+    // Zakładka „Pull request” otwiera się pierwsza.
+    expect(wrapper.text()).toContain('Anna Nowak — odrzucił')
+    expect(wrapper.text()).toContain('Build validation')
     expect(wrapper.text()).toContain('Konflikty scalania')
+    expect(wrapper.text()).not.toContain('Checkout.VatRate')
+
+    // Klik w komórkę builda przenosi od razu na zakładkę z testami.
+    await wrapper.findAll('td.clickable')[1]!.trigger('click')
+
     expect(wrapper.text()).toContain('Checkout.VatRate')
+    expect(wrapper.text()).toContain('nie przeszedł')
   })
 })

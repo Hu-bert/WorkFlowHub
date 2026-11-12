@@ -192,3 +192,25 @@ Wersje u użytkownika: Azure DevOps Server 25H2 (patch 9), TeamCity 2026.1, Octo
 - **TeamCity 2026.1 odrzucił kodem 400 filtr buildów** (`state:any` razem z `running:any`). Filtr nie zawiera już `running`, a przy kolejnym 400 FlowHub próbuje dwóch prostszych wersji.
 - **Komunikat błędu zawiera teraz początek odpowiedzi serwera** (bez HTML, do 400 znaków) — TeamCity pisze w niej, który fragment zapytania jest zły. Widać to w „Diagnostyce połączeń”.
 - Nadal niesprawdzone: sam odczyt buildów po poprawce, testy i zmiany z TeamCity, wdrożenia z Octopus.
+
+## Faza 14 — widok repo w zakładkach, dane poza repozytorium, spójny interfejs (2026-11-12)
+
+Potwierdzone na serwerach użytkownika (zrzut ekranu): pull request z TFS, build z TeamCity z listą nieudanych testów, środowiska z Octopus.
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Szczegóły repo w zakładkach** (Pull request · Build · Wdrożenia · Commity · Informacje), stała wysokość z przewijaniem | Długa lista testów „rozjeżdżała” widok. Ten sam komponent w lokalnych kopiach i w tabeli repo zadania. |
+| **Zwarty wiersz: PR, build z numerem, wersje na środowiskach**; kolumna „Release” usunięta (jest w zakładce Wdrożenia) | Prośba użytkownika. Klik w PR / build / środowisko rozwija szczegóły od razu na właściwej zakładce. |
+| **Na środowisku pokazujemy wersję wdrożoną teraz** (dowolny release); zielona = wersja z tego brancha, szara = inna | Żeby szybko porównać wersje między środowiskami. „Gotowe na DEV” liczy się dalej tylko dla wersji z brancha. |
+| **Katalog repo i mapy repo w folderze ustawień** (`%LOCALAPPDATA%\FlowHub`), pierwsze uruchomienie kopiuje dotychczasowy `repos.yaml` | Żeby `git pull` aplikacji nie nadpisywał katalogu i nie trzeba go było robić od nowa. Plik w repozytorium zostaje jako przykład startowy. |
+| **Karta „Gdzie są zapisane dane”** w Ustawieniach | Prośba użytkownika — pełne ścieżki do ustawień, tokenów, katalogu, map, bazy i zadań. |
+| **Środowiska wybierane z listy z serwera wdrożeń** (pojedyncze i wielokrotne pole z podpowiedziami) | Zamiast wpisywać nazwy ręcznie. Mechanizm ogólny: pole ustawień z `Suggest`. |
+| **Modele: lista podpowiedzi z modeli widzianych w sesjach CLI** (+ `auto`) | Copilot CLI nie ma polecenia wypisującego modele poza sesją (sprawdzone: `--model` z nieistniejącą nazwą nie podaje listy). Planu / limitów konta CLI też nie udostępnia. |
+| **„Klonuj” w katalogu repo** → `{folder}\{nazwa repo}`, bez okna logowania Gita | Prośba użytkownika. Sprawdzone prawdziwym `git clone` na lokalnym repo. |
+| **Jedno miejsce na wygląd kontrolek** (domyślne ustawienia Vuetify: zwarte pola, tabele, listy, zakładki; baza 15 px) | Spójny, zwarty interfejs na wszystkich stronach bez poprawiania każdej osobno. |
+
+**Nie sprawdzone:** klonowanie z prawdziwego TFS (zależy od danych logowania zapisanych w Gicie), lista środowisk z prawdziwego Octopus w polu wyboru, lista modeli po sesjach na koncie firmowym.
+
+**Pytania użytkownika bez wdrożenia (do decyzji):**
+- **logFaces** — serwer ma REST API (zapytania o logi, JSON), ale adresy i parametry są tylko w podręczniku / na serwerze; nie udało się ich potwierdzić z publicznej strony. Do wdrożenia potrzebny jest przykład zapytania z serwera użytkownika.
+- **Proces / usługa na zdalnej maszynie po wdrożeniu** — wykonalne z PowerShell (`Get-CimInstance Win32_Process -ComputerName …` albo `Get-Service -ComputerName …`), wymaga uprawnień do maszyny i włączonego WinRM; nazwy procesów przypisywane do repo w katalogu.

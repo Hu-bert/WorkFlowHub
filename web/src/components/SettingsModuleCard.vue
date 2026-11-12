@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 
-import { saveSettings, testSettings, type ConnectionStatus, type ConnectionTest, type SettingsModule } from '@/api/settings'
+import { fetchSuggestions, saveSettings, testSettings, type ConnectionStatus, type ConnectionTest, type SettingsModule } from '@/api/settings'
 import { formatDateTime } from '@/shared/format'
 import { connectionPresentationOf } from '@/stores/connections'
 import { useNotifications } from '@/stores/notifications'
@@ -29,6 +29,25 @@ watch(
   },
   { immediate: true },
 )
+
+/** Podpowiedzi do pól (np. środowiska z Octopus) — doczytywane, gdy pole dostanie fokus. */
+const suggestions = reactive<Record<string, string[]>>({})
+const suggestionNotes = reactive<Record<string, string>>({})
+
+async function loadSuggestions(key: string) {
+  if (suggestions[key]) return
+  try {
+    suggestions[key] = await fetchSuggestions(props.module.id, key)
+    suggestionNotes[key] = suggestions[key].length ? '' : 'Serwer nie zwrócił żadnych wartości.'
+  } catch (error) {
+    suggestions[key] = []
+    suggestionNotes[key] = `Lista niedostępna (${error instanceof Error ? error.message : error}) — wpisz wartość ręcznie.`
+  }
+}
+
+/** Pole wielokrotnego wyboru jest zapisywane jako tekst po przecinku. */
+const listOf = (key: string) => (values[key] ?? '').split(',').map((item) => item.trim()).filter(Boolean)
+const setList = (key: string, items: string[]) => (values[key] = items.join(', '))
 
 const dirty = computed(() =>
   props.module.fields.some((item) =>
@@ -159,6 +178,29 @@ async function executeTest() {
           </v-chip>
           <v-btn v-if="item.hasValue" variant="text" size="small" prepend-icon="mdi-delete-outline" @click="clearSecret(item.field.key)">Usuń</v-btn>
         </div>
+
+        <v-combobox
+          v-else-if="item.field.suggest && item.field.multiple"
+          :model-value="listOf(item.field.key)"
+          :items="suggestions[item.field.key] ?? []"
+          :label="item.field.label"
+          :hint="suggestionNotes[item.field.key] || item.field.hint || undefined"
+          persistent-hint
+          multiple
+          chips
+          closable-chips
+          @focus="loadSuggestions(item.field.key)"
+          @update:model-value="setList(item.field.key, $event as string[])"
+        />
+        <v-combobox
+          v-else-if="item.field.suggest"
+          v-model="values[item.field.key]"
+          :items="suggestions[item.field.key] ?? []"
+          :label="item.field.label"
+          :hint="suggestionNotes[item.field.key] || item.field.hint || undefined"
+          persistent-hint
+          @focus="loadSuggestions(item.field.key)"
+        />
 
         <v-text-field
           v-else

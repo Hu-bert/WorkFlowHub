@@ -5,8 +5,10 @@
   --fh-font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
+/* 15px jako baza: wszystkie rozmiary w rem skalują się razem — interfejs jest zwarty, ale czytelny. */
 html {
   overflow-y: auto;
+  font-size: 15px;
 }
 
 body,
@@ -34,7 +36,7 @@ body,
 .fh-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   max-width: 1500px;
 }
 
@@ -48,12 +50,40 @@ body,
 
 .fh-page-header h1 {
   margin: 0;
-  font-size: 1.9rem;
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.2;
 }
 
 .fh-page-header p {
-  margin: 0.3rem 0 0;
+  margin: 0.2rem 0 0;
   color: var(--fh-muted);
+  font-size: 0.9rem;
+}
+
+/* Tabele: nagłówki jak etykiety — małe, szare, wersalikami. */
+.v-table > .v-table__wrapper > table > thead > tr > th {
+  font-size: 0.7rem !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fh-muted) !important;
+}
+
+.v-table {
+  background: transparent !important;
+}
+
+code {
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 0.85em;
+}
+
+/* Alerty: tytuł wielkości zwykłego nagłówka, nie baneru. */
+.v-alert-title {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.v-alert {
+  font-size: 0.875rem;
 }

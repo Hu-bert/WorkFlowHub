@@ -9,6 +9,10 @@ export interface SettingField {
   kind: SettingKind
   hint: string | null
   choices: { value: string; label: string }[] | null
+  /** Pole ma listę podpowiedzi z serwera (nadal można wpisać własną wartość). */
+  suggest: boolean
+  /** Wiele wartości, zapisywanych po przecinku. */
+  multiple: boolean
 }
 
 export interface SettingValue {
@@ -54,3 +58,15 @@ export interface ConnectionStatus {
 
 /** refresh = sprawdź teraz (bez tego serwer oddaje wynik sprzed najwyżej kilku minut). */
 export const fetchConnectionStatus = (refresh = false) => getJson<ConnectionStatus[]>(`/api/settings/status?refresh=${refresh}`)
+
+export const fetchSuggestions = (moduleId: string, key: string) =>
+  getJson<string[]>(`/api/settings/${moduleId}/suggestions?key=${encodeURIComponent(key)}`)
+
+/** Miejsce na dysku, w którym FlowHub trzyma dane. */
+export interface StorageLocation {
+  name: string
+  path: string
+  description: string
+}
+
+export const fetchStorage = () => getJson<StorageLocation[]>('/api/settings/storage')
