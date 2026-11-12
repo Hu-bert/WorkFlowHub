@@ -90,6 +90,10 @@ public static class RepositoryEndpoints
             return catalog.Find(remote.Name) ?? catalog.Save(new CodeRepository { Name = remote.Name, Url = remote.Url, DefaultBranch = remote.DefaultBranch }, null);
         });
 
+        // Procesy / usługi repo na maszynach (z katalogu repo) — „czy serwis wstał po wdrożeniu”.
+        group.MapGet("/{name}/processes", async (string name, IRepositoryCatalog catalog, RemoteProcessService processes, CancellationToken ct) =>
+            catalog.Find(name) is { } repository ? Results.Ok(await processes.CheckAsync(repository, ct)) : Results.NotFound());
+
         // Klonowanie repo z katalogu do wybranego folderu na dysku.
         group.MapPost("/{name}/clone", async (string name, CloneRequest request, IRepositoryCatalog catalog, LocalRepositoryService local, CancellationToken ct) =>
             catalog.Find(name) is { } repository

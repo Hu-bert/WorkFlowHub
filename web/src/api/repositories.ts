@@ -116,3 +116,15 @@ export const deleteRepoMap = (name: string) => deleteJson<void>(`${repo(name)}/m
 /** Klonuje repo z katalogu do folderu na dysku ({directory}\{nazwa repo}); puste = folder repozytoriów z Ustawień. */
 export const cloneRepository = (name: string, directory: string | null) =>
   postJson<{ path: string }>(`${repo(name)}/clone`, { directory })
+
+/** Wynik sprawdzenia procesu / usługi repo na maszynie. */
+export interface RemoteProcessState {
+  host: string
+  name: string
+  label: string | null
+  running: boolean
+  found: { kind: 'process' | 'service'; name: string; state: string; startedAt: string | null }[]
+  error: string | null
+}
+
+export const fetchProcesses = (name: string) => getJson<RemoteProcessState[]>(`${repo(name)}/processes`)

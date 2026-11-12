@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import type { BuildStatus, CiChange, PullRequestStatus, RepositoryLinks, StatusCell } from '@/api/integrations'
-import type { GitCommit } from '@/api/repositories'
+import { fetchProcesses, type GitCommit, type RemoteProcessState } from '@/api/repositories'
 import { formatDateTime } from '@/shared/format'
 import { healthPresentation } from '@/shared/healthPresentation'
 
 import HealthCell from './HealthCell.vue'
 import SystemLinks from './SystemLinks.vue'
 
-export type RepoDetailsTab = 'pr' | 'build' | 'deploy' | 'commits' | 'info'
+export type RepoDetailsTab = 'pr' | 'build' | 'deploy' | 'processes' | 'commits' | 'info'
 
 /**
  * Szczegóły repo w zakładkach — wspólne dla lokalnych kopii i tabeli repo w zadaniu.
@@ -27,7 +27,36 @@ const props = defineProps<{
   release: string | null
   links: RepositoryLinks | null
   localCommits?: GitCommit[]
+  /** Nazwa repo w katalogu — gdy podana i repo ma przypisane procesy, pojawia się zakładka „Procesy”. */
+  catalogName?: string | null
+  hasProcesses?: boolean
 }>()
+
+/** Procesy sprawdzamy dopiero po wejściu na zakładkę — to zapytanie do zdalnych maszyn, bywa wolne. */
+const processes = ref<RemoteProcessState[] | null>(null)
+const processesLoading = ref(false)
+const processesError = ref('')
+
+async function loadProcesses() {
+  if (!props.catalogName) return
+  processesLoading.value = true
+  processesError.value = ''
+  try {
+    processes.value = await fetchProcesses(props.catalogName)
+  } catch (error) {
+    processesError.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    processesLoading.value = false
+  }
+}
+
+watch(
+  tab,
+  (current) => {
+    if (current === 'processes' && processes.value === null) void loadProcesses()
+  },
+  { immediate: true },
+)
 
 const voteLabel = { Waiting: 'czeka', Approved: 'zaakceptował', ApprovedWithSuggestions: 'zaakceptował z uwagami', Rejected: 'odrzucił' }
 const voteIcon = {
@@ -68,6 +97,7 @@ const deploymentNote = (cell: StatusCell) =>
         <v-chip v-if="failedTests" size="x-small" color="error" variant="flat" class="ml-2">{{ failedTests }}</v-chip>
       </v-tab>
       <v-tab value="deploy"><v-icon icon="mdi-rocket-launch-outline" size="16" start />Wdrożenia</v-tab>
+      <v-tab v-if="hasProcesses" value="processes"><v-icon icon="mdi-server-network" size="16" start />Procesy</v-tab>
       <v-tab value="commits">
         <v-icon icon="mdi-source-commit" size="16" start />Commity
         <span v-if="commitCount" class="count">{{ commitCount }}</span>
@@ -143,6 +173,35 @@ const deploymentNote = (cell: StatusCell) =>
               <th>{{ environment.environment }}</th>
               <td><HealthCell :cell="environment.status" /></td>
               <td class="fh-muted">{{ deploymentNote(environment.status) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </template>
+
+      <!-- Procesy na maszynach -->
+      <template v-else-if="tab === 'processes'">
+        <div class="headline">
+          <span class="fh-muted">Czy serwis działa na maszynie (procesy i usługi Windows, tylko odczyt).</span>
+          <v-btn size="x-small" variant="tonal" prepend-icon="mdi-refresh" :loading="processesLoading" @click="loadProcesses">Sprawdź teraz</v-btn>
+        </div>
+        <p v-if="processesError" class="text-error">{{ processesError }}</p>
+        <table v-if="processes" class="deployments">
+          <tbody>
+            <tr v-for="state in processes" :key="state.host + state.name">
+              <th>
+                <v-icon :icon="state.running ? 'mdi-check-circle' : 'mdi-close-circle'" :color="state.running ? 'success' : 'error'" size="16" />
+                {{ state.host }}<span v-if="state.label" class="fh-muted"> · {{ state.label }}</span>
+              </th>
+              <td>
+                <div v-if="state.error" class="text-error">{{ state.error }}</div>
+                <div v-else-if="state.found.length === 0">Nie znaleziono procesu ani usługi „{{ state.name }}”.</div>
+                <div v-for="item in state.found" :key="item.kind + item.name">
+                  {{ item.name }}
+                  <span class="fh-muted">
+                    — {{ item.kind === 'service' ? `usługa: ${item.state}` : 'proces działa' }}<template v-if="item.startedAt">, od {{ formatDateTime(item.startedAt) }}</template>
+                  </span>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -303,5 +362,10 @@ h4 {
 
 .deployments td {
   padding: 0.3rem 1.5rem 0.3rem 0;
+}
+
+.deployments th,
+.deployments td {
+  vertical-align: top;
 }
 </style>
