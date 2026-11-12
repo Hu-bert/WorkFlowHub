@@ -15,4 +15,10 @@ public sealed record CodeRepository
 
     /// <summary>Słowa kluczowe / moduły do rozpoznawania repo z treści zadania.</summary>
     public IReadOnlyList<string> Keywords { get; init; } = [];
+
+    /// <summary>Procesy / usługi Windows tego repo na maszynach — do sprawdzenia po wdrożeniu, czy serwis wstał.</summary>
+    public IReadOnlyList<RemoteProcess> Processes { get; init; } = [];
 }
+
+/// <summary>Name = początek nazwy procesu albo usługi (tak jak w Menedżerze zadań, bez .exe). Label = np. nazwa środowiska.</summary>
+public sealed record RemoteProcess(string Host, string Name, string? Label = null);

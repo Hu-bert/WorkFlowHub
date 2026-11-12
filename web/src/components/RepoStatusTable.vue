@@ -5,6 +5,7 @@ import { fetchRepoStatus, type RepoStatus, type WorkItemRepoStatus } from '@/api
 import { liveConnection } from '@/api/live'
 import { formatDateTime } from '@/shared/format'
 import { healthPresentation } from '@/shared/healthPresentation'
+import { useCatalog } from '@/stores/catalog'
 import { useNotifications } from '@/stores/notifications'
 
 import DiffDialog from './DiffDialog.vue'
@@ -16,6 +17,7 @@ import StatusBadge from './StatusBadge.vue'
 const props = defineProps<{ workItemId: string; refreshKey: number }>()
 
 const notifications = useNotifications()
+const catalog = useCatalog()
 const status = ref<WorkItemRepoStatus | null>(null)
 const loading = ref(false)
 const opened = ref<{ repo: string; tab: RepoDetailsTab } | null>(null)
@@ -129,6 +131,8 @@ const vsCodeLink = (path: string) => `vscode://file/${path.replace(/\\/g, '/')}`
                 :environments="repo.environments"
                 :release="repo.release"
                 :links="repo.links"
+                :catalog-name="repo.repo"
+                :has-processes="(catalog.repositories.find((known) => known.name === repo.repo)?.processes.length ?? 0) > 0"
               >
                 <template #info>
                   <dl class="info">

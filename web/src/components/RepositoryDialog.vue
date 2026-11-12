@@ -20,7 +20,7 @@ const props = defineProps<{ repository: CodeRepository | null; isNew: boolean }>
 const emit = defineEmits<{ close: []; saved: [repository: CodeRepository] }>()
 
 const notifications = useNotifications()
-const form = reactive<CodeRepository>({ name: '', url: '', defaultBranch: 'main', ciBuildConfigurations: [], deployProject: null, keywords: [] })
+const form = reactive<CodeRepository>({ name: '', url: '', defaultBranch: 'main', ciBuildConfigurations: [], deployProject: null, keywords: [], processes: [] })
 const saving = ref(false)
 const configurations = ref<CiConfiguration[]>([])
 const projects = ref<DeployProject[]>([])
@@ -50,7 +50,10 @@ async function save() {
   if (!props.repository) return
   saving.value = true
   try {
-    const payload = { ...form, deployProject: form.deployProject?.trim() || null }
+    const processes = form.processes
+      .map((process) => ({ host: process.host.trim(), name: process.name.trim(), label: process.label?.trim() || null }))
+      .filter((process) => process.host && process.name)
+    const payload = { ...form, deployProject: form.deployProject?.trim() || null, processes }
     const saved = props.isNew ? await createRepository(payload) : await updateRepository(props.repository.name, payload)
     notifications.success(`Zapisano repo ${saved.name}`)
     emit('saved', saved)
@@ -63,7 +66,7 @@ async function save() {
 </script>
 
 <template>
-  <v-dialog :model-value="repository !== null" max-width="760" @update:model-value="emit('close')">
+  <v-dialog :model-value="repository !== null" max-width="820" scrollable @update:model-value="emit('close')">
     <v-card v-if="repository" :title="isNew ? 'Nowe repo w katalogu' : `Repo: ${repository.name}`" prepend-icon="mdi-source-repository">
       <v-card-text class="form">
         <div class="row">
@@ -104,6 +107,23 @@ async function save() {
           chips
           closable-chips
         />
+
+        <div class="processes">
+          <div class="processes-head">
+            <strong>Procesy / usługi na maszynach</strong>
+            <v-btn size="small" variant="tonal" prepend-icon="mdi-plus" @click="form.processes.push({ host: '', name: '', label: null })">Dodaj</v-btn>
+          </div>
+          <p class="fh-muted">
+            Po wdrożeniu FlowHub sprawdzi, czy proces albo usługa o tej nazwie działa na maszynie (zakładka „Procesy”). Nazwa = początek nazwy z Menedżera
+            zadań, bez .exe.
+          </p>
+          <div v-for="(process, index) in form.processes" :key="index" class="process">
+            <v-text-field v-model="process.host" label="Maszyna" placeholder="v-app-02" hide-details />
+            <v-text-field v-model="process.name" label="Nazwa procesu / usługi" hide-details />
+            <v-text-field v-model="process.label" label="Etykieta (np. środowisko)" hide-details />
+            <v-btn variant="text" size="small" icon="mdi-delete-outline" title="Usuń" @click="form.processes.splice(index, 1)" />
+          </div>
+        </div>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
@@ -125,5 +145,24 @@ async function save() {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 1rem;
+}
+
+.processes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.processes p {
+  margin: 0.25rem 0 0.6rem;
+  font-size: 0.8rem;
+}
+
+.process {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }
 </style>

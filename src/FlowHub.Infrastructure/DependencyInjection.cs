@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddSingleton<IBlockLibrary, FileBlockLibrary>();
         services.AddSingleton<IScriptRunner, PowerShellScriptRunner>();
         services.AddSingleton<IGitService, GitCliService>();
+        services.AddSingleton<IRemoteProcessProbe, FlowHub.Infrastructure.Processes.WindowsProcessProbe>();
 
         return services.AddAgentRunner().AddSettings();
     }

@@ -42,6 +42,8 @@ const folders = computed<Folder[]>(() => {
 })
 
 const statusOf = (repository: LocalRepository) => local.statuses[repository.path]?.status ?? null
+const hasProcesses = (repository: LocalRepository) =>
+  (catalog.repositories.find((known) => known.name === repository.catalogName)?.processes.length ?? 0) > 0
 const levelOf = (repository: LocalRepository) => statusOf(repository)?.level ?? 'Unknown'
 
 /** Najgorszy poziom w folderze — widać z daleka, w którym folderze coś wymaga uwagi. */
@@ -176,6 +178,8 @@ onMounted(() => local.load())
             :release="statusOf(repository)?.release ?? null"
             :links="statusOf(repository)?.links ?? null"
             :local-commits="repository.recentCommits"
+            :catalog-name="repository.catalogName"
+            :has-processes="hasProcesses(repository)"
           >
             <template #info>
               <dl class="info">

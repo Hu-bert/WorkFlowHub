@@ -49,7 +49,7 @@ onMounted(() => {
   void local.load()
 })
 
-const emptyRepository = (): CodeRepository => ({ name: '', url: '', defaultBranch: 'main', ciBuildConfigurations: [], deployProject: null, keywords: [] })
+const emptyRepository = (): CodeRepository => ({ name: '', url: '', defaultBranch: 'main', ciBuildConfigurations: [], deployProject: null, keywords: [], processes: [] })
 
 /** Po zmianie katalogu dopasowanie lokalnych kopii i ich statusy mogą być inne — czytamy od nowa. */
 async function afterChange() {

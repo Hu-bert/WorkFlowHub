@@ -28,6 +28,15 @@ export interface CodeRepository {
   ciBuildConfigurations: string[]
   deployProject: string | null
   keywords: string[]
+  /** Procesy / usługi Windows repo na maszynach — sprawdzane po wdrożeniu. */
+  processes: RemoteProcess[]
+}
+
+export interface RemoteProcess {
+  host: string
+  /** Początek nazwy procesu albo usługi (jak w Menedżerze zadań, bez .exe). */
+  name: string
+  label: string | null
 }
 
 export interface RepositorySuggestion {

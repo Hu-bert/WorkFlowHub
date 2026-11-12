@@ -78,6 +78,7 @@ public sealed class YamlRepositoryCatalog(WorkspacePaths paths, ILogger<YamlRepo
         #   ciBuildConfigurations  - id build configuration w TeamCity
         #   deployProject          - projekt (slug) w Octopus Deploy; puste = nazwa repo
         #   keywords               - słowa, po których FlowHub rozpoznaje repo z treści zadania
+        #   processes              - procesy / usługi na maszynach (host, name, label) sprawdzane po wdrożeniu
 
         """;
 
@@ -93,6 +94,7 @@ public sealed class YamlRepositoryCatalog(WorkspacePaths paths, ILogger<YamlRepo
                 CiBuildConfigurations = [.. repository.CiBuildConfigurations],
                 DeployProject = string.IsNullOrWhiteSpace(repository.DeployProject) ? null : repository.DeployProject.Trim(),
                 Keywords = [.. repository.Keywords],
+                Processes = repository.Processes.Select(process => new ProcessEntry { Host = process.Host, Name = process.Name, Label = process.Label }).ToList(),
             }).ToList(),
         };
 
@@ -154,6 +156,10 @@ public sealed class YamlRepositoryCatalog(WorkspacePaths paths, ILogger<YamlRepo
         CiBuildConfigurations = entry.CiBuildConfigurations,
         DeployProject = entry.DeployProject,
         Keywords = entry.Keywords,
+        Processes = entry.Processes
+            .Where(process => !string.IsNullOrWhiteSpace(process.Host) && !string.IsNullOrWhiteSpace(process.Name))
+            .Select(process => new RemoteProcess(process.Host!.Trim(), process.Name!.Trim(), string.IsNullOrWhiteSpace(process.Label) ? null : process.Label.Trim()))
+            .ToList(),
     };
 
     private sealed class RepositoriesFile
@@ -169,5 +175,13 @@ public sealed class YamlRepositoryCatalog(WorkspacePaths paths, ILogger<YamlRepo
         public List<string> CiBuildConfigurations { get; set; } = [];
         public string? DeployProject { get; set; }
         public List<string> Keywords { get; set; } = [];
+        public List<ProcessEntry> Processes { get; set; } = [];
+    }
+
+    private sealed class ProcessEntry
+    {
+        public string? Host { get; set; }
+        public string? Name { get; set; }
+        public string? Label { get; set; }
     }
 }

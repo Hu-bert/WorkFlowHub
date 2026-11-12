@@ -55,6 +55,7 @@ public static class DependencyInjection
         services.AddSingleton<BranchStatusCache>();
         services.AddSingleton<LocalRepositoryService>();
         services.AddSingleton<RepoMapStore>();
+        services.AddSingleton<RemoteProcessService>();
         services.AddSingleton<ISettingsModule, LocalRepositoriesSettingsModule>();
 
         services.AddSingleton<AgentPromptBuilder>();

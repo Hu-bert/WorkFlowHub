@@ -214,3 +214,17 @@ Potwierdzone na serwerach użytkownika (zrzut ekranu): pull request z TFS, build
 **Pytania użytkownika bez wdrożenia (do decyzji):**
 - **logFaces** — serwer ma REST API (zapytania o logi, JSON), ale adresy i parametry są tylko w podręczniku / na serwerze; nie udało się ich potwierdzić z publicznej strony. Do wdrożenia potrzebny jest przykład zapytania z serwera użytkownika.
 - **Proces / usługa na zdalnej maszynie po wdrożeniu** — wykonalne z PowerShell (`Get-CimInstance Win32_Process -ComputerName …` albo `Get-Service -ComputerName …`), wymaga uprawnień do maszyny i włączonego WinRM; nazwy procesów przypisywane do repo w katalogu.
+
+## Faza 15 — procesy i usługi na maszynach (2026-11-12)
+
+| Decyzja | Dlaczego |
+|---|---|
+| **Przy repo w katalogu lista „Procesy / usługi na maszynach”** (maszyna, początek nazwy, etykieta np. środowisko) | Prośba: po wdrożeniu sprawdzić, czy serwis wstał; nazwa w Menedżerze zadań różni się od nazwy repo, więc przypisuje się ją ręcznie. |
+| **Zakładka „Procesy” w szczegółach repo**, sprawdzanie dopiero po wejściu na zakładkę i na „Sprawdź teraz” | To zapytanie do zdalnych maszyn — bywa wolne, więc nie robimy go przy każdym odświeżeniu listy. |
+| **Odczyt przez CIM (`Get-CimInstance Win32_Process` / `Win32_Service`) po WinRM**, na koncie, na którym działa FlowHub | Wbudowane w Windows, bez agentów na maszynach. Tylko odczyt. Szukamy i procesu, i usługi; zatrzymana usługa = „nie działa”. |
+| **Nazwy maszyny i procesu przechodzą walidację i są argumentami skryptu**, nie fragmentem jego treści | Te wartości trafiają do polecenia systemowego. |
+| **Błąd jednej maszyny nie przerywa sprawdzania pozostałych**; komunikat to jedna linia z podpowiedzią o WinRM | Czytelność. |
+
+**Sprawdzone:** proces na tym komputerze, nieosiągalna maszyna, odrzucanie niebezpiecznych nazw.
+**Nie sprawdzone:** prawdziwa zdalna maszyna (WinRM, uprawnienia konta, zapora).
+**logFaces — nadal otwarte:** serwer ma REST API, ale jego opis jest tylko w podręczniku PDF, którego tekstu nie dało się odczytać; użytkownik korzysta z klienta desktopowego. Potrzebny rozdział „REST API” z podręcznika albo przykład działającego zapytania.
