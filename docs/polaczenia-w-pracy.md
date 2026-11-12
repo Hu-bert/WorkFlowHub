@@ -1,56 +1,51 @@
-# Połączenia w pracy — jak podłączyć i co sprawdzić
+# Połączenia w pracy
 
-Klienty TFS, TeamCity, Octopus i Jira są napisane wg dokumentacji API i nie były sprawdzone na prawdziwych serwerach. Ten plik mówi, jak je podłączyć i co zrobić, gdy czegoś nie widać.
-## 1. Wersje — gdzie je znaleźć
+Jak podłączyć FlowHub do systemów firmowych i co zrobić, gdy czegoś nie widać. FlowHub tylko czyta — niczego w tych systemach nie zmienia.
 
-| System | W przeglądarce | Przez API (GET) |
-|---|---|---|
-| TFS / Azure DevOps Server | ikona „?” → *About* (albo stopka strony administracji) | — (wersję API ustawiasz w Ustawieniach: 6.0 = Server 2020, 7.0 = Server 2022) |
-| TeamCity | stopka każdej strony („TeamCity Professional 2024.x”) | `/app/rest/server` → pole `version` |
-| Octopus Deploy | menu użytkownika / stopka | `/api` → pole `Version` |
-| Jira | stopka strony albo *Administracja → System → Informacje o systemie* | `/rest/api/2/serverInfo` → `version`, `deploymentType` (Server / Cloud) |
+## 1. Kolejność podłączania
 
-Najprościej: wpisz adres i token w **Ustawieniach** FlowHub i kliknij **„Sprawdź połączenie”** — TeamCity pokaże wersję, pozostałe potwierdzą, że adres i token działają.
+1. **Ustawienia → TFS**: adres kolekcji, token, wersja API `7.0` → „Zapisz i sprawdź”.
+2. **Ustawienia → TeamCity / buildy**: źródło „Statusy buildów z TFS” (nie wymaga niczego więcej) albo „TeamCity” (adres + token; daje testy i zmiany).
+3. **Ustawienia → Octopus Deploy**: adres, klucz API, potem wybierz z listy środowisko domyślne i środowiska pokazywane.
+4. **Ustawienia → Repozytoria lokalne**: folder z kopiami repo (np. `C:\tfs`).
+5. **Repozytoria → Katalog repo**: dla każdego repo adres w TFS, gałąź główna (`master`), build configuration z TeamCity i projekt Octopus (listy podpowiadają wartości z serwerów). Repo z dysku dodasz przyciskiem „Dodaj do katalogu”.
+6. **Ustawienia → GitHub Copilot CLI**: „Copilot CLI” zamiast atrapy (wcześniej `copilot login` w zwykłym terminalu) oraz plan „Bez limitu”.
 
-## 2. Tokeny — jakie i z jakimi prawami
+## 2. Tokeny
 
 | System | Rodzaj tokenu | Minimalne prawa |
 |---|---|---|
 | TFS | Personal Access Token (profil → *Security → Personal access tokens*) | Code: Read |
 | TeamCity | Access token (profil → *Access Tokens*) | podgląd projektu |
 | Octopus | API key (profil → *My API Keys*) | podgląd projektu i wdrożeń |
-| Jira Server / Data Center | Personal Access Token (profil → *Personal Access Tokens*) | odczyt zadań |
+| Jira Server / Data Center | Personal Access Token | odczyt zadań |
 | Jira Cloud | API token + e-mail konta | odczyt zadań |
 
-FlowHub tylko czyta. Tokeny wpisujesz w Ustawieniach — są szyfrowane na Twoim komputerze i nie trafiają do repo.
+Tokeny wpisujesz w Ustawieniach — są szyfrowane na Twoim koncie Windows i leżą poza repo. Ścieżki pokazuje karta „Gdzie są zapisane dane”.
 
-## 3. Gdy czegoś nie widać — diagnostyka
+## 3. Gdy czegoś nie widać
 
-Repozytoria → rozwiń wiersz repo → **„Diagnostyka połączeń”**. Zobaczysz listę zapytań, które FlowHub wysłał do serwerów (bez tokenów), i odpowiedź na każde. „Kopiuj wynik” kopiuje całość do schowka.
+**Repozytoria → rozwiń repo → zakładka Informacje → „Diagnostyka połączeń”.** Zobaczysz zapytania wysłane do serwerów (bez tokenów) i odpowiedź na każde; „Kopiuj wynik” kopiuje całość.
 
-- `404 — nie znaleziono` przy pull requestach: inna nazwa repo albo projekt w TFS niż w adresie repo w katalogu.
-- Brak builda: ustaw źródło buildów „Statusy z TFS” albo wpisz id build configuration przy repo (Repozytoria → Katalog repo → Edytuj).
-- Puste środowiska: FlowHub nie dopasował release do brancha — patrz pytanie 2 niżej.
-
-> **Zanim pokażesz wynik komukolwiek (także modelowi AI):** usuń dane, których nie wolno wynosić z firmy — adresy serwerów, nazwy projektów. Sprawdź też, czy firmowe zasady na to pozwalają.
-## 4. Trzy pytania, na które API nie odpowie
-
-1. **TeamCity:** jak nazywa się branch w buildach — tak jak w Git (`feature/PROJ-123-opis`), czy skrócony? Numer buildu zawiera nazwę brancha — w jakim formacie?
-2. **Octopus:** skąd release „wie”, z którego builda pochodzi — numer wersji = numer buildu? Czy jest osobny kanał / release per branch?
-3. **Mapowanie:** czy nazwa repo w TFS = id build configuration = nazwa projektu w Octopus, czy trzeba to wpisać ręcznie w `repos.yaml` (`ciBuildConfigurations`, `deployProject`)?
-
-## 5. Co już jest
-
-| System | Stan w FlowHub |
+| Objaw | Najczęstsza przyczyna |
 |---|---|
-| TFS | pull requesty, komentarze, polityki, lista repo, **statusy buildów** (źródło buildów „Statusy z TFS”) |
-| Jira | treść zadania |
-| TeamCity | buildy brancha, testy, zmiany — wymaga id build configuration przy repo (Repozytoria → Katalog → Edytuj) |
-| Octopus | release i wdrożenia na środowiska — projekt = nazwa repo albo slug wpisany przy repo |
+| Brak PR, w diagnostyce `404` | inny projekt albo nazwa repo w TFS niż w adresie repo w katalogu |
+| Brak builda | źródło „TeamCity” bez id build configuration przy repo; albo przełącz na „Statusy z TFS” |
+| Błąd `400` z TeamCity | serwer nie rozumie filtra — w komunikacie jest odpowiedź serwera, wklej ją |
+| Środowiska szare | na środowisku jest inna wersja niż z tego brancha (to informacja, nie błąd) |
+| Brak „release z brancha” | FlowHub nie powiązał release z branchem — zobacz punkt 4 |
+| Procesy: błąd WinRM | brak dostępu konta do maszyny, wyłączony WinRM albo zapora |
 
-Żaden klient nie był sprawdzony na prawdziwym serwerze. Najszybsza ścieżka w pracy:
+> **Zanim pokażesz wynik diagnostyki komukolwiek (także modelowi AI):** usuń dane, których nie wolno wynosić z firmy — adresy serwerów, nazwy projektów. Sprawdź, czy firmowe zasady na to pozwalają.
 
-1. Ustawienia → TFS: adres kolekcji, token, „Zapisz i sprawdź”.
-2. Ustawienia → TeamCity / buildy: źródło **„Statusy buildów z TFS”** (nie wymaga niczego więcej).
-3. Repozytoria → przy repo rozwiń wiersz → **„Diagnostyka połączeń”**. Jeśli PR albo build się nie pokazuje, skopiuj wynik („Kopiuj wynik”) — widać w nim, o co FlowHub zapytał i co odpowiedział serwer (bez tokenów).
-4. Dopiero potem TeamCity i Octopus przez REST, jeśli potrzebujesz testów i wdrożeń.
+## 4. Jak FlowHub łączy systemy
+
+- **Branch → PR:** po nazwie brancha źródłowego w TFS. Branch `pull/<nr>/merge` to PR o tym numerze.
+- **Branch → build:** build z brancha oraz build pull requesta (`pull/{id}/merge` — wzorzec zmienisz w Ustawieniach → TeamCity / buildy).
+- **Build → release:** release Octopus pasuje do brancha, gdy wskazuje na niego build information albo referencja Git, gdy wersja zawiera nazwę brancha, albo gdy wersja jest w numerze builda (build „1.30.0 #643” → release 1.30.0). Jeśli u Was działa to inaczej, daj znać, jak release powstaje z builda.
+- **Repo → procesy:** ręcznie, w edycji repo (maszyna + początek nazwy procesu lub usługi).
+
+## 5. Czego jeszcze nie ma
+
+- **logFaces** — potrzebny opis REST API serwera (rozdział „REST API” z podręcznika albo przykład zapytania).
+- Co zostało sprawdzone na prawdziwych serwerach, a co nie: [DECYZJE.md](DECYZJE.md).

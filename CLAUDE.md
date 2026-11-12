@@ -1,5 +1,5 @@
 # FlowHub
 
-Pełna specyfikacja i zasady pracy: @INSTRUKCJE.md
+Opis projektu i zasady pracy: @INSTRUKCJE.md
 
-Najważniejsze: pracuj iteracyjnie, plan przed każdą fazą, czekaj na „OK”, po fazie build + testy i STOP. Integracje na start jako Fake (przełączane w `appsettings.json`).
+Najważniejsze: zmiana na osobnym branchu → zielony `./check.ps1` → merge `--no-ff` do `main`; `git push` tylko po wyraźnej zgodzie. Decyzje i rzeczy niesprawdzone zapisuj w `docs/DECYZJE.md`. Nie zgaduj zewnętrznych API. Systemy firmowe tylko do odczytu.

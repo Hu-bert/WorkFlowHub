@@ -1,14 +1,14 @@
-# Katalog repozytoriów FlowHub. Jeden wpis = jedno repo.
+# Przykładowy katalog repozytoriów — punkt startu przy pierwszym uruchomieniu FlowHub.
+# Twój własny katalog leży w folderze ustawień (%LOCALAPPDATA%\FlowHub\repos.yaml) i edytujesz go
+# w aplikacji: Repozytoria → Katalog repo. Tego pliku nie trzeba zmieniać.
 #
-#   name                   - nazwa repo (pokazywana w UI, nazwa katalogu klonu)
-#   url                    - adres klonu w TFS / Azure DevOps Server
-#                            (demo:// = repo demonstracyjne tworzone lokalnie, bez sieci)
+#   name                   - nazwa repo (nazwa katalogu klonu w zadaniu)
+#   url                    - adres klonu (demo:// = repo demonstracyjne tworzone lokalnie, bez sieci)
 #   defaultBranch          - branch, od którego odchodzi branch zadania
 #   ciBuildConfigurations  - id build configuration w TeamCity
-#   deployProject          - nazwa projektu w Octopus Deploy
+#   deployProject          - projekt (slug) w Octopus Deploy; puste = nazwa repo
 #   keywords               - słowa, po których FlowHub rozpoznaje repo z treści zadania
-#
-# W pracy: podmień wpisy demo na prawdziwe repo.
+#   processes              - procesy / usługi na maszynach (host, name, label) sprawdzane po wdrożeniu
 repositories:
   - name: Billing.Api
     url: demo://Billing.Api
@@ -30,9 +30,3 @@ repositories:
     ciBuildConfigurations: [Customer_Portal_Build, Customer_Portal_E2E]
     deployProject: Customer.Portal
     keywords: [portal, klient, logowanie, formularz, frontend]
-
-  - name: "ParishManager2.0"
-    url: "https://github.com/Hu-bert/ParishManager2.0.git"
-    defaultBranch: "main"
-    ciBuildConfigurations: []
-    keywords: []

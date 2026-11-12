@@ -7,7 +7,7 @@ Biblioteka bloczków kopiowana do każdego repo zadania. Wszystko **po polsku** 
 | `agents/` | `.github/agents/<nazwa>.agent.md` | custom agent Copilot |
 | `skills/` | `.github/skills/<nazwa>/SKILL.md` | skill Copilot |
 | `prompts/` | — (wklejane przez FlowHub) | szablony promptów kroków |
-| `scripts/` | `work/<zadanie>/scripts/` | PowerShell (kroki `Script`) |
-| `templates/` | — | szablony maila, Teams, opisu dla architektów |
+| `scripts/` | — (uruchamiane przez FlowHub) | PowerShell z BOM (kroki `Script`); kontekst w zmiennych `FLOWHUB_*` |
+| `templates/` | — | szablony maila i wiadomości na Teams |
 
-Format plików Copilot: [docs/copilot-cli.md](../docs/copilot-cli.md).
+Edycja i generator nowych bloczków: strona „Flow i bloczki” → Bloczki. Format plików Copilot: [docs/copilot-cli.md](../docs/copilot-cli.md).
