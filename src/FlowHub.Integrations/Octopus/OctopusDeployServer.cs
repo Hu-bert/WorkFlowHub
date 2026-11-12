@@ -96,26 +96,24 @@ public sealed class OctopusDeployServer(ApiClient client, IOptions<OctopusOption
 public static class OctopusMapper
 {
     /// <summary>
-    /// Z „progression” projektu: środowiska oraz release, który powstał z brancha, i jego wdrożenia.
-    /// Gdy żaden release nie pasuje do brancha, środowiska są puste („—”) — nie pokazujemy cudzego release.
+    /// Z „progression” projektu: dla każdego środowiska to, co jest na nim teraz wdrożone (dowolny release —
+    /// żeby dało się szybko porównać wersje między środowiskami), z zaznaczeniem, czy to wersja z naszego brancha.
     /// </summary>
     public static DeploymentOverview Overview(
         JsonElement progression, string project, string branch, IReadOnlyList<BuildStatus> builds, bool isDefaultBranch, string portalUrl)
     {
-        var environments = Json.Items(progression, "Environments")
-            .Select(environment => (Id: Json.Text(environment, "Id") ?? "", Name: Json.Text(environment, "Name") ?? "?"))
-            .ToList();
-
-        var releases = Json.Items(progression, "Releases").Cast<JsonElement?>().ToList();
-        var match = releases.FirstOrDefault(entry => Matches(Json.Object(entry!.Value, "Release"), branch, builds))
-            ?? (isDefaultBranch ? releases.FirstOrDefault() : null);
+        var releases = Json.Items(progression, "Releases").ToList();
+        var match = releases.Cast<JsonElement?>().FirstOrDefault(entry => Matches(Json.Object(entry!.Value, "Release"), branch, builds))
+            ?? (isDefaultBranch ? releases.Cast<JsonElement?>().FirstOrDefault() : null);
 
         var version = match is { } found ? Json.Text(Json.Object(found, "Release"), "Version") : null;
 
         return new DeploymentOverview(
             project,
             version,
-            environments.Select(environment => Deployment(match, environment.Id, environment.Name, version, portalUrl)).ToList());
+            Json.Items(progression, "Environments")
+                .Select(environment => Deployment(releases, Json.Text(environment, "Id") ?? "", Json.Text(environment, "Name") ?? "?", version, portalUrl))
+                .ToList());
     }
 
     /// <summary>
@@ -138,24 +136,31 @@ public static class OctopusMapper
             || builds.Any(build => build.Number.Split(' ', '#').Any(token => token.Length > 0 && string.Equals(token, version, StringComparison.OrdinalIgnoreCase)));
     }
 
-    private static EnvironmentDeployment Deployment(JsonElement? release, string environmentId, string name, string? version, string portalUrl)
+    /// <summary>Aktualne wdrożenie na środowisku: wpis oznaczony IsCurrent, a gdy go brak — najnowszy po czasie.</summary>
+    private static EnvironmentDeployment Deployment(List<JsonElement> releases, string environmentId, string name, string? branchVersion, string portalUrl)
     {
-        var deployments = release is { } entry ? Json.Object(entry, "Deployments") : null;
-        var items = deployments is { } all && all.TryGetProperty(environmentId, out var list) ? Json.Array(list).ToList() : [];
+        var items = releases
+            .Select(release => Json.Object(release, "Deployments"))
+            .Where(deployments => deployments is { } all && all.TryGetProperty(environmentId, out _))
+            .SelectMany(deployments => Json.Array(deployments!.Value.GetProperty(environmentId)))
+            .ToList();
+
         if (items.Count == 0)
         {
-            return new EnvironmentDeployment(name, null, DeploymentState.None, null, null);
+            return new EnvironmentDeployment(name, null, DeploymentState.None, null, null, FromBranch: false);
         }
 
-        JsonElement current = items.FirstOrDefault(item => Json.Flag(item, "IsCurrent"), items[0]);
-        var deployedVersion = Json.Text(current, "ReleaseVersion") ?? version;
-        DateTime? at = DateTime.TryParse(Json.Text(current, "CompletedTime") ?? Json.Text(current, "QueueTime"), out var date) ? date.ToUniversalTime() : null;
+        var current = items.Where(item => Json.Flag(item, "IsCurrent")).DefaultIfEmpty(items.MaxBy(Time)).First();
+        var version = Json.Text(current, "ReleaseVersion");
 
         return new EnvironmentDeployment(
-            name, deployedVersion, State(Json.Text(current, "State")), at,
-            $"{portalUrl}/deployments/releases/{deployedVersion}/deployments/{Json.Text(current, "DeploymentId")}");
+            name, version, State(Json.Text(current, "State")), Time(current),
+            $"{portalUrl}/deployments/releases/{version}/deployments/{Json.Text(current, "DeploymentId")}",
+            FromBranch: branchVersion is not null && string.Equals(version, branchVersion, StringComparison.OrdinalIgnoreCase));
     }
 
+    private static DateTime? Time(JsonElement deployment) =>
+        DateTime.TryParse(Json.Text(deployment, "CompletedTime") ?? Json.Text(deployment, "QueueTime"), out var date) ? date.ToUniversalTime() : null;
     /// <summary>TaskState z Octopus: Queued, Executing, Failed, Canceled, TimedOut, Success, Cancelling.</summary>
     public static DeploymentState State(string? state) => state switch
     {

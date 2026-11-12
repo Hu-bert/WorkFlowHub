@@ -64,6 +64,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<ISettingsStore, JsonSettingsStore>();
         services.AddSingleton<ISecretStore, ProtectedSecretStore>();
+        services.AddSingleton<IKnownModels, KnownModels>();
         services.AddSingleton<ISettingsModule, CopilotSettingsModule>();
 
         return services;

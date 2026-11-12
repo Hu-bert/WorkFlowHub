@@ -34,6 +34,9 @@ public static class OptionsSetup
         builder.Services.PostConfigure<WorkspaceOptions>(options =>
         {
             options.Root = Path.GetFullPath(options.Root, contentRoot);
+            options.DataDirectory = string.IsNullOrWhiteSpace(options.DataDirectory)
+                ? UserSettings.Directory(builder.Configuration)
+                : Path.GetFullPath(options.DataDirectory, contentRoot);
             options.WorkDirectory = string.IsNullOrWhiteSpace(options.WorkDirectory)
                 ? null
                 : Path.GetFullPath(options.WorkDirectory, contentRoot);

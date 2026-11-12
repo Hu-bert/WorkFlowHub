@@ -98,6 +98,35 @@ public sealed class LocalRepositoryService(IOptions<LocalRepositoriesOptions> op
         return catalog.Save(new CodeRepository { Name = local.Name, Url = local.RemoteUrl }, null);
     }
 
+    /// <summary>
+    /// Klonuje repo z katalogu do folderu na dysku: {directory}\{nazwa repo}. Katalog docelowy nie może istnieć.
+    /// Puste directory = folder repozytoriów z Ustawień.
+    /// </summary>
+    public async Task<string> CloneAsync(CodeRepository repository, string? directory, CancellationToken ct)
+    {
+        var parent = string.IsNullOrWhiteSpace(directory) ? options.Value.ScanRoot?.Trim() : directory.Trim();
+
+        if (string.IsNullOrEmpty(parent) || !Path.IsPathFullyQualified(parent))
+        {
+            throw new DomainException("Podaj pełną ścieżkę folderu docelowego (albo ustaw folder repozytoriów w Ustawieniach).");
+        }
+
+        if (!Uri.TryCreate(repository.Url, UriKind.Absolute, out var url) || url.Scheme is not ("http" or "https" or "ssh" or "file"))
+        {
+            throw new DomainException($"Adres repo '{repository.Url}' nie nadaje się do klonowania (repo demonstracyjne?).");
+        }
+
+        var target = Path.Combine(parent, repository.Name);
+        if (Directory.Exists(target))
+        {
+            throw new DomainException($"Katalog {target} już istnieje.");
+        }
+
+        await git.CloneAsync(repository.Url, target, ct);
+        _snapshot = null; // nowy klon ma być widoczny od razu
+        return target;
+    }
+
     private LocalRepository Describe(string root, string path, GitWorkingCopy copy)
     {
         var name = NameFromUrl(copy.RemoteUrl) ?? System.IO.Path.GetFileName(path);

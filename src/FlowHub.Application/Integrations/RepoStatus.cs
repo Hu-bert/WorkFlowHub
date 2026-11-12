@@ -96,8 +96,16 @@ public static class RepoStatusBuilder
         return new StatusCell(Level(worst.State), text, worst.Url);
     }
 
+    /// <summary>Tekst = wersja na środowisku. Kolor tylko dla wersji z brancha; cudza wersja jest szara (do porównania).</summary>
     public static EnvironmentCell Environment(EnvironmentDeployment deployment) => new(
         deployment.Environment,
+        deployment switch
+        {
+            { FromBranch: false, State: not DeploymentState.None } => new StatusCell(HealthLevel.Unknown, deployment.Version ?? "—", deployment.Url),
+            _ => OwnDeployment(deployment),
+        });
+
+    private static StatusCell OwnDeployment(EnvironmentDeployment deployment) =>
         deployment.State switch
         {
             DeploymentState.Success => new StatusCell(HealthLevel.Ok, deployment.Version ?? "OK", deployment.Url),
@@ -105,7 +113,7 @@ public static class RepoStatusBuilder
             DeploymentState.Executing => new StatusCell(HealthLevel.Pending, "Wdrażanie", deployment.Url),
             DeploymentState.Queued => new StatusCell(HealthLevel.Pending, "W kolejce", deployment.Url),
             _ => new StatusCell(HealthLevel.Unknown, "—"),
-        });
+        };
 
     /// <summary>Poziom repo = najgorszy z testów, PR, buildu i wdrożeń. „Nie wdrożono jeszcze” nie jest problemem.</summary>
     public static HealthLevel Worst(IEnumerable<StatusCell> cells) =>
