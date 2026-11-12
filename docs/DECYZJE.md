@@ -185,3 +185,10 @@ Wersje u użytkownika: Azure DevOps Server 25H2 (patch 9), TeamCity 2026.1, Octo
 
 **Nie sprawdzone (brak dostępu do serwerów):** klienty TeamCity i Octopus oraz statusy z TFS — tylko testy mapowania na przykładach z dokumentacji; adresy stron w przeglądarce (parametr `branch` w TeamCity, ścieżki portalu Octopus, `?version=GB…` w TFS); reguła dopasowania release do brancha; aktualizacja mapy repo prawdziwym agentem (sprawdzone na podstawionym).
 **Jeśli coś nie działa:** otwórz repo na stronie Repozytoria → „Diagnostyka połączeń” → „Kopiuj wynik”.
+
+### Poprawka po teście na prawdziwym TeamCity (2026-11-12)
+
+- **Sprawdzone na prawdziwych serwerach:** lista build configuration z TeamCity i lista projektów z Octopus (podpowiedzi w edycji repo) — adresy i tokeny działają.
+- **TeamCity 2026.1 odrzucił kodem 400 filtr buildów** (`state:any` razem z `running:any`). Filtr nie zawiera już `running`, a przy kolejnym 400 FlowHub próbuje dwóch prostszych wersji.
+- **Komunikat błędu zawiera teraz początek odpowiedzi serwera** (bez HTML, do 400 znaków) — TeamCity pisze w niej, który fragment zapytania jest zły. Widać to w „Diagnostyce połączeń”.
+- Nadal niesprawdzone: sam odczyt buildów po poprawce, testy i zmiany z TeamCity, wdrożenia z Octopus.

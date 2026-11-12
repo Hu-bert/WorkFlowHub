@@ -35,6 +35,26 @@ public sealed class CompanySystemsTests(FlowHubApiFactory factory) : IClassFixtu
         Assert.Equal(2, status.FailedTests.Count);
     }
 
+    [Fact]
+    public void TeamCity_build_filters_go_from_the_fullest_to_the_simplest_and_never_mix_state_with_running()
+    {
+        var locators = TeamCityCiServer.BuildLocators("Kcf_Production", "ZR-3925-2");
+
+        Assert.Equal(3, locators.Count);
+        Assert.All(locators, locator => Assert.Contains("buildType:(id:Kcf_Production)", locator));
+        Assert.All(locators, locator => Assert.DoesNotContain("running:", locator)); // serwer 2026.1 odpowiedział na to 400
+        Assert.Equal("buildType:(id:Kcf_Production),branch:ZR-3925-2,count:1", locators[^1]);
+    }
+
+    [Fact]
+    public void Server_error_text_is_shown_without_html_and_cut_to_a_readable_length()
+    {
+        var html = "<html><body><h1>Bad Request</h1>\n<p>Locator dimension 'running' is unknown.</p></body></html>";
+
+        Assert.Equal("Bad Request Locator dimension 'running' is unknown.", FlowHub.Integrations.Http.ApiClient.Summarize(html));
+        Assert.Equal(401, FlowHub.Integrations.Http.ApiClient.Summarize(new string('x', 2000)).Length);
+    }
+
     [Theory]
     [InlineData("queued", null, BuildState.Queued)]
     [InlineData("running", "SUCCESS", BuildState.Running)]
