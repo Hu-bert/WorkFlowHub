@@ -1,6 +1,6 @@
 # Copilot CLI — ściągawka
 
-Źródło: oficjalna dokumentacja GitHub (sprawdzone 2026-11-11). Pozycje oznaczone **(?)** nie są potwierdzone w docs — sprawdzić przed użyciem w kodzie.
+Źródło: oficjalna dokumentacja GitHub i `copilot --help` (CLI 1.0.109, sprawdzone 2026-11-11). Sekcja „Sprawdzone na prawdziwym CLI” na końcu opisuje to, na czym opiera się FlowHub.
 
 - https://docs.github.com/en/copilot/reference/cli-command-reference
 - https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli
@@ -26,8 +26,8 @@ copilot -p "Przeanalizuj repo i zapisz context.md" `
   --output-format json `
   --allow-tool 'read' --allow-tool 'shell(git:*)' `
   --deny-tool 'shell(git push)' `
-  --share work/123-bug/logs/analiza.md `
-  --no-ask-user --no-auto-update
+  --allow-tool 'write(C:\work\123-bug\context.md)' `
+  --usage-output-file usage.json --no-ask-user --no-auto-update --no-color
 ```
 
 | Flaga | Do czego |
@@ -43,10 +43,11 @@ copilot -p "Przeanalizuj repo i zapisz context.md" `
 | `--add-dir <dir>` | dodatkowy katalog z dostępem |
 | `-C <dir>` | katalog roboczy |
 | `--share <plik.md>` | zapis transkryptu do Markdown |
+| `--usage-output-file <plik>` | zużycie tokenów i kredytów po zakończeniu sesji (JSON) |
 | `-r, --resume [id]` / `--continue` | wznowienie sesji / ostatniej sesji |
 | `-n, --name <nazwa>` / `--session-id <id>` | nazwanie sesji / własne ID |
 | `--mode plan` / `--plan` | tryb planowania (bez zmian w plikach) |
-| `--effort <poziom>` | poziom „wysiłku” rozumowania |
+| `--reasoning-effort <poziom>` | poziom „wysiłku” rozumowania |
 | `--log-level debug` / `--log-dir <dir>` | logi |
 | `--no-custom-instructions` | ignoruj AGENTS.md / copilot-instructions.md |
 | `--no-ask-user` | agent nie zadaje pytań (dla automatyzacji) |
@@ -98,13 +99,13 @@ Skróty w polu wpisywania: `!komenda` — uruchom w shellu, `@plik` — dołącz
 
 - Repo: `.github/agents/<nazwa>.agent.md`; użytkownik: `~/.copilot/agents/` (nadpisuje repo).
 - ID = nazwa pliku bez `.agent.md`.
-- Frontmatter: `name`, `description`, `tools` (np. `["read", "grep", "glob", "edit", "execute"]`), `model`. Pełna lista pól **(?)**.
+- Frontmatter: `name`, `description`, `tools` (np. `["read", "grep", "glob", "edit", "execute"]`), `model`. Lista `tools` ogranicza narzędzia agenta — bez `edit` nie zapisze pliku.
 
 ```markdown
 ---
 name: analiza-technologii
 description: Analizuje stack, strukturę i komendy build/test repozytorium.
-tools: ["read", "grep", "glob"]
+tools: ["read", "grep", "glob", "edit"]
 ---
 Jesteś analitykiem technologii. ...
 ```
@@ -118,7 +119,7 @@ Jesteś analitykiem technologii. ...
 ## Instrukcje
 
 CLI czyta i łączy: `.github/copilot-instructions.md`, `.github/instructions/**/*.instructions.md`, `AGENTS.md`, `~/.copilot/copilot-instructions.md`.
-`.github/prompts/*.prompt.md` — **(?) brak w docs CLI** → we FlowHub prompty to nasze szablony, wklejane przez aplikację.
+Plików `.github/prompts/*.prompt.md` CLI nie czyta — we FlowHub prompty to nasze szablony (`blocks/prompts/`), wklejane przez aplikację.
 
 ## Gdzie są dane sesji
 
@@ -127,14 +128,9 @@ CLI czyta i łączy: `.github/copilot-instructions.md`, `.github/instructions/**
 - `~/.copilot/settings.json` — `model`, `logLevel`, `defaultPermissionMode`.
 - `COPILOT_HOME` zmienia cały katalog.
 
-## Copilot SDK dla .NET
+## Copilot SDK dla .NET (nieużywany)
 
-- Paczka: `GitHub.Copilot.SDK`, namespace `GitHub.Copilot`. Ma wbudowany runtime CLI (`COPILOT_CLI_PATH` — własna ścieżka).
-- `CopilotClient` → `StartAsync()` → `CreateSessionAsync(new SessionConfig { Model, OnPermissionRequest, Streaming = true })` → `session.On<SessionEvent>(...)` → `SendAsync(new MessageOptions { Prompt })`.
-- Zdarzenia: `AssistantMessageDeltaEvent`, `AssistantMessageEvent`, `ToolExecutionStartEvent`, `ToolExecutionCompleteEvent`, `SessionIdleEvent`, `SessionErrorEvent`.
-- Uprawnienia: `PermissionDecision.ApproveOnce()` / `Reject(feedback)` — **nie** `PermissionHandler.ApproveAll`.
-- Tokenów nie ma w strumieniu zdarzeń — CLI zapisuje je na końcu do pliku z `--usage-output-file` (patrz „Sprawdzone na prawdziwym CLI” niżej).
-
+FlowHub steruje CLI bezpośrednio. Gdyby był potrzebny SDK: paczka `GitHub.Copilot.SDK` (`CopilotClient` → `CreateSessionAsync` → zdarzenia sesji), jako drugi `IAgentRunner`. Uprawnienia zawsze `ApproveOnce()` / `Reject()`, nigdy `ApproveAll`.
 ## Sprawdzone na prawdziwym CLI (1.0.109, 2026-11-11)
 
 - `copilot -p … --output-format json`: każda linia to `{"type": …, "data": {…}}`. Używamy: `session.start` (`sessionId`), `assistant.message_delta` (`deltaContent`), `assistant.message` (`content`; puste przy samym wywołaniu narzędzia), `tool.execution_start` (`toolCallId`, `toolName`, `arguments`), `tool.execution_complete` (`toolCallId`, `success` — bez nazwy narzędzia), `result` (`exitCode`).
@@ -143,3 +139,4 @@ CLI czyta i łączy: `.github/copilot-instructions.md`, `.github/instructions/**
 - `--agent <nazwa>` wczytuje `.github/agents/<nazwa>.agent.md` z katalogu roboczego; lista `tools` we frontmatterze ogranicza narzędzia agenta (bez `edit` agent nie zapisze pliku).
 - Kontynuacja rozmowy: `--resume=<sessionId>` (także w trybie interaktywnym). `--model auto` = wybór Copilota.
 - Instalator Windows kładzie CLI w `%LOCALAPPDATA%\GitHubCopilotCLI\copilot.exe`; FlowHub szuka tam, gdy `copilot` nie ma w PATH.
+- Modeli i planu konta CLI nie wypisuje poza sesją (`/model` i `/usage` działają tylko interaktywnie). Zdarzenie `session.auto_mode_resolved` podaje `chosenModel` i `availableModels` — z tego FlowHub buduje listę podpowiedzi modeli.

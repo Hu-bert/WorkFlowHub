@@ -2,8 +2,9 @@
 
 Webowe „CRM zadań programistycznych”: tworzysz zadanie, a FlowHub prowadzi je krok po kroku (skrypty, agenci GitHub Copilot, kroki ręczne, sprawdzenia) — **z Twoją akceptacją na każdym etapie** — licząc tokeny i koszt.
 
-- Specyfikacja i zasady pracy: [INSTRUKCJE.md](INSTRUKCJE.md)
-- Decyzje podjęte po drodze i lista rzeczy niesprawdzonych: [docs/DECYZJE.md](docs/DECYZJE.md)
+- Opis projektu i zasady pracy: [INSTRUKCJE.md](INSTRUKCJE.md)
+- Decyzje i to, co sprawdzono na prawdziwych systemach: [docs/DECYZJE.md](docs/DECYZJE.md)
+- Podłączanie serwerów w pracy: [docs/polaczenia-w-pracy.md](docs/polaczenia-w-pracy.md)
 - Ściągawka Copilot CLI: [docs/copilot-cli.md](docs/copilot-cli.md)
 
 ## Uruchomienie
@@ -20,12 +21,12 @@ Bez żadnej konfiguracji aplikacja działa na **atrapach (Fake)**: agent udaje s
 
 ## Jak to działa
 
-1. **Nowe zadanie** — klucz, tytuł, treść (z Jiry przez „Pobierz” albo wklejona ręcznie), typ zadania i repozytoria („Zaproponuj” dopasuje je po słowach kluczowych).
+1. **Nowe zadanie** — klucz, tytuł, treść (z Jiry przez „Pobierz” albo wklejona ręcznie), typ zadania i repozytoria („Zaproponuj” dopasuje je po słowach kluczowych, można też dodać repo prosto z TFS).
 2. **Uruchom flow** — proste skrypty (folder, klon, branch, kopiowanie agentów) idą same; każdy inny krok czeka na „Zatwierdź”.
-3. **Każdy krok**: propozycja (prompt do edycji, model, budżet) → Zatwierdź / Pomiń → konsola na żywo → wynik → dalej albo „Powtórz z uwagą”.
-4. **Tabela repo** pokazuje dla każdego repo: testy, PR, build, release i środowiska. Najgorszy status wygrywa.
-5. **Retro** na końcu podsumowuje zadanie i proponuje zmiany w bloczkach — wdrażasz je w zakładce „Flow i bloczki”.
-
+3. **Każdy krok**: propozycja (prompt do edycji, model, budżet) → Zatwierdź / Pomiń → konsola na żywo → wynik → dalej albo „Powtórz z uwagą”. Po realizacji jest przegląd „co dalej?” — wpisujesz polecenie, a agent poprawia, aż potwierdzisz.
+4. **Terminal Copilota** w zadaniu — interaktywny CLI w repo, także jako kontynuacja sesji kroku.
+5. **Repozytoria** — Twoje kopie na dysku jako drzewo: PR, build, wersje na środowiskach, procesy na maszynach; szczegóły w zakładkach.
+6. **Retro** na końcu podsumowuje zadanie i proponuje zmiany w bloczkach — wdrażasz je w zakładce „Flow i bloczki” (jest tam też generator nowych bloczków).
 ## Połączenia
 
 Wszystko ustawiasz na stronie **Ustawienia** — zmiany działają od razu, bez restartu. Ustawienia, tokeny (zaszyfrowane), katalog repo i mapy repo leżą w `%LOCALAPPDATA%\FlowHub` — nigdy w repo. Dokładne ścieżki pokazuje karta „Gdzie są zapisane dane” w Ustawieniach.
@@ -42,13 +43,13 @@ Wszystko ustawiasz na stronie **Ustawienia** — zmiany działają od razu, bez 
 | Katalog repo | Repozytoria → Katalog repo | Skąd klonować repo i jak nazywa się w TeamCity / Octopus. Zapis w folderze ustawień; `repos.yaml` w repo to przykład startowy. |
 | Kolumny kanbana | `Board:Columns` w [appsettings.json](src/FlowHub.Api/appsettings.json) | |
 
-Klienty TFS, TeamCity, Octopus i Jira są napisane wg dokumentacji i **nie były sprawdzone na prawdziwych serwerach** — kroki podłączenia i diagnostyka: [docs/polaczenia-w-pracy.md](docs/polaczenia-w-pracy.md).
+Kroki podłączenia i diagnostyka: [docs/polaczenia-w-pracy.md](docs/polaczenia-w-pracy.md). Co sprawdzono na prawdziwych serwerach, a co nie: [docs/DECYZJE.md](docs/DECYZJE.md).
 ## Struktura
 
 ```
 src/FlowHub.Domain          encje i reguły (zero zależności)
 src/FlowHub.Application     use case'y, silnik flow, porty
-src/FlowHub.Infrastructure  EF Core + SQLite, YAML, PowerShell, Git, agent (Fake / Copilot CLI)
+src/FlowHub.Infrastructure  EF Core + SQLite, YAML, PowerShell, Git, Copilot CLI, terminal, ustawienia
 src/FlowHub.Integrations    TFS, TeamCity, Octopus, Jira (+ atrapy)
 src/FlowHub.Api             Web API + SignalR + hosting frontendu
 web/                        Vue 3 + TypeScript + Vuetify
@@ -71,5 +72,7 @@ tests/                      xUnit; frontend: Vitest w web/
 ## Bezpieczeństwo
 
 - Agent nigdy nie dostaje `--allow-all`; narzędzia tylko z listy kroku, a przed `write` / `shell` pytanie o zgodę w UI.
+- Systemy firmowe (TFS, TeamCity, Octopus, Jira, maszyny) są tylko czytane.
+- Tokeny są szyfrowane i leżą poza repozytorium.
 - FlowHub nie robi `git push` i niczego nie wysyła (mail i Teams to szkice w plikach).
 - Agenci i skille kopiowane do repo zadania trafiają do `.git/info/exclude` — nie wejdą do PR.
