@@ -5,5 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <LangVersion>latest</LangVersion>
+    <!-- NU1507: kilka źródeł NuGet przy centralnym zarządzaniu paczkami (np. firmowe feedy) - bez mapowania źródeł to tylko ostrzeżenie. -->
+    <NoWarn>$(NoWarn);NU1507</NoWarn>
   </PropertyGroup>
 </Project>
